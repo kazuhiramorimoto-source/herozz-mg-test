@@ -1,0 +1,223 @@
+<!doctype html>
+<html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>HERO'ZZ MG定例テスト</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=BIZ+UDPGothic:wght@400;700&family=Yomogi&family=Shippori+Mincho:wght@600;800&family=Roboto+Mono:wght@500;700&display=swap">
+<link rel="stylesheet" href="style.css">
+<style>
+@media print{ body{background:#fff;padding:0} .bar-top,.noprint{display:none!important} .sheet{box-shadow:none;border:1px solid #000;margin:0 0 10px} .q{break-inside:avoid} .result{break-inside:avoid} }
+.linkbox{font-family:var(--mono);font-size:12px;word-break:break-all;background:var(--fill);border:1px solid var(--rule-soft);padding:8px 10px;margin-top:8px}
+.pill.kw{background:var(--warn-soft);color:var(--warn)}
+.pwbox{display:grid;grid-template-columns:auto 1fr;border:1.5px solid var(--ink);margin:10px auto 0;max-width:640px;text-align:left}
+.pwbox label{padding:10px 16px;font-weight:700;border-right:1.5px solid var(--ink);background:var(--fill);white-space:nowrap;letter-spacing:.2em}
+.pwbox input{border:0;border-radius:0;font-size:18px;padding:10px 14px;background:var(--paper);font-family:var(--mono)}
+</style>
+</head><body>
+<div class="wrap">
+  <div class="bar-top">
+    <div class="strip">
+      <div class="meta"><span><b id="kai"></b></span><span>試験時間 <b id="lim">20</b>分</span></div>
+      <div class="timer" id="timer"><small>残り</small>20:00</div>
+    </div>
+    <div class="progress" id="progWrap" hidden><i id="progBar"></i></div>
+  </div>
+  <div id="banner"></div>
+  <main id="view"></main>
+</div>
+
+<script>
+/* ============ 設定（config.json）と問題（items.enc.json＝合言葉で復号） ============ */
+let CFG = {round:"第1回　2026年10月",limitMin:20,showKey:false,form:{postUrl:"",entryName:"",entryData:""}};
+let ITEMS = null;
+const SECTIONS = { ichi:{label:"第１問",sub:"一問一答　言葉の定義・穴埋め・選択"}, sel:{label:"第２問",sub:"選択　MGとしてどう動く・どう返す"}, essay:{label:"第３問",sub:"記述　自分の言葉で説明する"} };
+const AI_TYPES = new Set(["short","essay"]);
+const PARAMS = new URLSearchParams(location.search);
+
+/* ============ ユーティリティ ============ */
+const $ = (s, el=document) => el.querySelector(s);
+const h = (tag, attrs={}, ...kids) => {
+  const el = document.createElement(tag);
+  for (const [k,v] of Object.entries(attrs)) { if (v == null || v === false) continue; if (k === "class") el.className = v; else if (k.startsWith("on")) el.addEventListener(k.slice(2), v); else el.setAttribute(k, v === true ? "" : v); }
+  for (const c of kids.flat()) if (c != null && c !== false) el.append(c.nodeType ? c : document.createTextNode(String(c)));
+  return el;
+};
+function hash(s){let x=2166136261;for(const c of s){x^=c.charCodeAt(0);x=Math.imul(x,16777619)}return x>>>0}
+function order(q){let a=hash(q.id)||1;const idx=q.ans.map((_,i)=>i);for(let i=idx.length-1;i>0;i--){a^=a<<13;a>>>=0;a^=a>>>17;a^=a<<5;a>>>=0;const j=a%(i+1);[idx[i],idx[j]]=[idx[j],idx[i]]}return idx}
+const KANA="1234", CIRC="①②③④";
+const rMax = q => q.rubric.reduce((a,b)=>a+b.p,0);
+const secMax = s => ITEMS.filter(q=>q.s===s).reduce((a,q)=>a+q.pts,0);
+const fmt = ms => { const t=Math.max(0,Math.ceil(ms/1000)); return String(Math.floor(t/60)).padStart(2,"0")+":"+String(t%60).padStart(2,"0"); };
+const len = s => [...(s||"")].length;
+const norm = s => String(s||"").normalize("NFKC").toLowerCase().replace(/[\s　「」『』()（）・,，、。.＝=]/g,"");
+const hit = (input,variants) => { const v=norm(input).replace(/(倍|再生|回)$/,""); return !!v && variants.some(x=>{const n=norm(x); return /^[0-9]+$/.test(n)||n.length<=1 ? v===n : (v===n || v.includes(n));}); };
+function fillRight(q,arr){ arr=arr||[]; if(q.anyOrder){ const used=new Set(); for(const a of arr){ const i=q.blanks.findIndex((b,k)=>!used.has(k)&&hit(a,b)); if(i>=0) used.add(i);} return used.size; } return q.blanks.filter((b,i)=>hit(arr[i],b)).length; }
+const fillOk = (q,arr) => fillRight(q,arr)===q.blanks.length;
+function kwItems(q,text){ const v=norm(text); return q.rubric.map(x=>x.kw&&v&&x.kw.every(g=>g.some(w=>v.includes(norm(w))))?x.p:0); }
+function gradeRec(rec){ // スプレッドシート側（Apps Script）と同じ採点
+  const sc={ichi:0,sel:0,essay:0,total:0,pending:false}, scores=rec.essayScores||{};
+  for(const q of ITEMS){ let pts=0;
+    if(q.type==="mc") pts=(rec.answers||{})[q.id]===0?q.pts:0;
+    else if(q.type==="fill") pts=q.pts*fillRight(q,(rec.answers||{})[q.id])/q.blanks.length;
+    else { let s=scores[q.id]; if(!s){ const k=kwItems(q,(rec.essays||{})[q.id]||""); s=scores[q.id]={items:k,score:k.reduce((a,b)=>a+b,0),comment:"",by:"kw"}; } if(s.by==="kw") sc.pending=true; pts=s.score/rMax(q)*q.pts; }
+    sc[q.s]+=pts; }
+  for(const k of ["ichi","sel","essay"]) sc[k]=Math.round(sc[k]*10)/10;
+  sc.total=Math.round((sc.ichi+sc.sel+sc.essay)*10)/10; rec.essayScores=scores; rec.sc=sc; rec.status=sc.pending?"仮":"確定"; return rec;
+}
+const b64u = { enc:s=>btoa(String.fromCharCode(...new TextEncoder().encode(s))).replace(/\+/g,"-").replace(/\//g,"_").replace(/=+$/,""),
+               dec:s=>new TextDecoder().decode(Uint8Array.from(atob(s.replace(/-/g,"+").replace(/_/g,"/")),c=>c.charCodeAt(0))) };
+const fromB64 = s => Uint8Array.from(atob(s),c=>c.charCodeAt(0));
+async function decryptItems(pw){
+  const blob=await (await fetch("items.enc.json?v="+Date.now())).json();
+  const km=await crypto.subtle.importKey("raw",new TextEncoder().encode(pw),"PBKDF2",false,["deriveKey"]);
+  const key=await crypto.subtle.deriveKey({name:"PBKDF2",salt:fromB64(blob.s),iterations:100000,hash:"SHA-256"},km,{name:"AES-GCM",length:256},false,["decrypt"]);
+  const pt=await crypto.subtle.decrypt({name:"AES-GCM",iv:fromB64(blob.iv)},key,fromB64(blob.d));
+  return JSON.parse(new TextDecoder().decode(pt));
+}
+
+/* ============ 状態（この端末だけ） ============ */
+const DKEY="mgtest-pages-r1";
+const S={ draft:{name:"",startedAt:null,answers:{},essays:{},test:PARAMS.get("test")==="1"}, rec:null, busy:false, err:"", pw:"" };
+function loadDraft(){ try{ const d=JSON.parse(localStorage.getItem(DKEY)||"null"); if(d) S.draft={...S.draft,...d}; S.pw=sessionStorage.getItem(DKEY+"-pw")||""; }catch(e){} }
+let lsT; function saveDraft(){ clearTimeout(lsT); lsT=setTimeout(()=>{try{localStorage.setItem(DKEY,JSON.stringify(S.draft))}catch(e){}},200); }
+
+/* ============ タイマー ============ */
+function remaining(){ if(!S.draft.startedAt) return CFG.limitMin*60000; return CFG.limitMin*60000-(Date.now()-Date.parse(S.draft.startedAt)); }
+setInterval(()=>{ const el=$("#timer");
+  if(S.rec){ el.replaceChildren(h("small",{},"所要"),fmt(Date.parse(S.rec.submittedAt)-Date.parse(S.rec.startedAt))); el.classList.remove("low"); return; }
+  const ms=remaining(); el.replaceChildren(h("small",{},"残り"),fmt(ms)); el.classList.toggle("low",!!S.draft.startedAt&&ms<3*60000);
+  if(S.draft.startedAt&&ITEMS&&ms<=0&&!S.busy) submit(true);
+},500);
+
+/* ============ 描画 ============ */
+function render(){
+  $("#kai").textContent=CFG.round; $("#lim").textContent=CFG.limitMin;
+  const b=$("#banner"); b.replaceChildren(); if(S.err) b.append(h("div",{class:"banner err"},S.err));
+  const v=$("#view"); v.replaceChildren(); $("#progWrap").hidden=true;
+  if(S.rec) return renderResult(v,S.rec);
+  if(S.draft.startedAt&&ITEMS) return renderTest(v);
+  renderCover(v);
+}
+const cnt=(s,t)=>ITEMS?ITEMS.filter(q=>q.s===s&&(!t||q.type===t)).length:0;
+function renderCover(v){
+  v.append(h("section",{class:"sheet cover"},
+    h("div",{class:"kai"},CFG.round),
+    h("h1",{},"マネージャー定例テスト"),
+    h("div",{class:"booklet"},"問題冊子"),
+    h("table",{class:"spec"},h("tbody",{},
+      h("tr",{},h("td",{},"試験時間"),h("td",{},`${CFG.limitMin}分（開始で計測）`)),
+      h("tr",{},h("td",{},"第１問"),h("td",{},"一問一答・穴埋め・選択　30点")),
+      h("tr",{},h("td",{},"第２問"),h("td",{},"選択　16点")),
+      h("tr",{},h("td",{},"第３問"),h("td",{},"記述（80〜100字以内）　54点")),
+      h("tr",{},h("td",{},"結果"),h("td",{},"提出後に自分の点数と採点が出る（順位は管理者が確認）")),
+      S.draft.test?h("tr",{},h("td",{},"受験の扱い"),h("td",{},"テスト受験（順位に入らない）")):null)),
+    h("div",{class:"notice"},h("div",{class:"notice-h"},"注意事項"),h("ol",{class:"rules"},
+      h("li",{},"教科書・講義資料・AIは使わずに、自分の言葉で解答すること。"),
+      h("li",{},"選択問題は、①〜④のうち正しいものを一つ選んで塗ること。"),
+      h("li",{},"穴埋めは空欄ごとに採点する。言葉が少し違っても、意味が合っていれば正解とする。"),
+      h("li",{},`「解答を始める」を押すと${CFG.limitMin}分の計測が始まる。途中で閉じても計測は止まらない。`),
+      h("li",{},"時間になると、その時点の解答で自動的に提出される。提出後の訂正はできない。"))),
+    h("div",{class:"namebox"},h("label",{for:"nm"},"氏名"),
+      h("input",{type:"text",id:"nm",value:S.draft.name,autocomplete:"name",placeholder:"MG名（例：まめりん）",oninput:e=>{S.draft.name=e.target.value;saveDraft();$("#go").disabled=!canStart()}})),
+    h("div",{class:"pwbox"},h("label",{for:"pw"},"合言葉"),
+      h("input",{type:"text",id:"pw",value:S.pw,autocomplete:"off",autocapitalize:"off",placeholder:"当日お伝えします",oninput:e=>{S.pw=e.target.value.trim();$("#go").disabled=!canStart()}})),
+    h("div",{class:"center",style:"margin-top:20px"},
+      h("button",{class:"btn red",id:"go",disabled:!canStart(),onclick:start},S.busy?"問題を開いています…":`解答を始める（${CFG.limitMin}分）`))
+  ));
+}
+const canStart=()=>S.draft.name.trim()&&S.pw&&!S.busy;
+async function start(){
+  S.busy=true; S.err=""; render();
+  try{ ITEMS=await decryptItems(S.pw); }catch(e){ S.busy=false; S.err="合言葉が違います。"; render(); return; }
+  try{ sessionStorage.setItem(DKEY+"-pw",S.pw); }catch(e){}
+  if(!S.draft.startedAt){ S.draft.startedAt=new Date().toISOString(); saveDraft(); }
+  S.busy=false; render(); scrollTo(0,0);
+}
+function isAnswered(q){ if(q.type==="mc") return S.draft.answers[q.id]!=null; if(q.type==="fill") return (S.draft.answers[q.id]||[]).filter(x=>x&&x.trim()).length===q.blanks.length; return len(S.draft.essays[q.id])>=(q.type==="short"?4:10); }
+function updateProgress(){ const total=ITEMS.length,n=ITEMS.filter(isAnswered).length; $("#progWrap").hidden=false; $("#progBar").style.width=(n/total*100)+"%"; const st=$("#subNote"); if(st) st.textContent=n<total?`未回答が ${total-n} 問あります（未回答は0点）。`:"すべて回答しました。"; }
+function head(q,no,extra){ return h("div",{class:"qhead"},h("span",{class:"qno"},`問${no}`),h("div",{class:"stem"},q.stem,q.src?h("span",{class:"tag"},q.src):null,q.type==="fill"?h("span",{class:"tag"},"穴埋め"):q.type==="short"?h("span",{class:"tag"},"一問一答"):null,AI_TYPES.has(q.type)?h("span",{class:"tag"},`${q.pts}点`):null),extra||null); }
+function mcBlock(q,no,mode,rec){
+  const ord=order(q), chosen=mode==="result"?(rec.answers||{})[q.id]:S.draft.answers[q.id], reveal=mode==="result"&&CFG.showKey;
+  const box=h("div",{class:"q"},head(q,no,mode==="result"?h("span",{class:"redpen"},chosen===0?"○":"×"):null),q.quote?h("div",{class:"quote"},q.quote):null);
+  const opts=h("div",{class:"opts",role:"radiogroup","aria-label":`問${no}`});
+  ord.forEach((ai,k)=>{ const id=`${q.id}_${ai}`; let cls="opt"; if(reveal){ if(ai===0) cls+=" right"; else if(ai===chosen) cls+=" wrong"; } else if(mode==="result"&&ai===chosen) cls+=" "+(ai===0?"right":"wrong");
+    opts.append(h("label",{class:cls,for:id},h("input",{type:"radio",name:q.id,id,checked:chosen===ai,disabled:mode==="result",onchange:()=>{S.draft.answers[q.id]=ai;saveDraft();updateProgress()}}),h("span",{class:"k"},KANA[k]),h("span",{},q.ans[ai]))); });
+  box.append(opts); if(reveal&&q.exp) box.append(h("div",{class:"exp"},q.exp)); return box;
+}
+function fillBlock(q,no,mode,rec){
+  const reveal=mode==="result"&&CFG.showKey, arr=mode==="result"?((rec.answers||{})[q.id]||[]):(S.draft.answers[q.id]||[]);
+  const box=h("div",{class:"q"},head(q,no,mode==="result"?h("span",{class:"redpen"},fillOk(q,arr)?"○":fillRight(q,arr)?"△":"×"):null));
+  const wrap=h("div",{class:"fill"});
+  q.blanks.forEach((_,i)=>{ const id=`${q.id}_b${i}`; wrap.append(h("label",{for:id},CIRC[i], mode==="result"?h("span",{class:"got",id},arr[i]||"（未回答）"):h("input",{type:"text",id,value:arr[i]||"",autocomplete:"off",maxlength:"30",oninput:e=>{const a=[...(S.draft.answers[q.id]||[])];a[i]=e.target.value;S.draft.answers[q.id]=a;saveDraft();updateProgress();}}))); });
+  box.append(wrap); if(reveal) box.append(h("div",{class:"key"},"正解："+q.key),q.exp?h("div",{class:"exp"},q.exp):null); return box;
+}
+function aiBlock(q,no,mode,rec){
+  const box=h("div",{class:"q"},head(q,no),q.quote?h("div",{class:"quote"},q.quote):null);
+  if(mode==="result"){
+    box.append(h("div",{class:"ansbox"},h("div",{class:"ans-text"},(rec.essays||{})[q.id]||"（未回答）")));
+    const sc=(rec.essayScores||{})[q.id];
+    box.append(sc?h("div",{class:"exp"},h("span",{class:"penscore"},`${Math.round(sc.score/rMax(q)*q.pts*10)/10}／${q.pts}点`),sc.by==="kw"?h("span",{class:"pill kw"},"仮採点"):null,h("span",{class:"pencomment"},sc.comment||""),sc.items&&CFG.showKey?h("div",{},q.rubric.map((x,i)=>`${x.t}…${sc.items[i]}/${x.p}`).join("\n")):null):h("div",{class:"exp"},h("span",{class:"pill wait"},"採点中")));
+    if(CFG.showKey) box.append(h("div",{class:"key"},"模範解答："+q.key),h("ul",{class:"rubric"},q.rubric.map(x=>h("li",{},`${x.t}（${x.p}）`)),q.zero?h("li",{},q.zero):null));
+  } else {
+    const c=h("div",{class:"count"}); const ta=h("textarea",{id:"es_"+q.id,maxlength:String(q.max),placeholder:`${q.max}字以内`,style:q.type==="short"?"min-height:72px":null,oninput:ev=>{S.draft.essays[q.id]=ev.target.value;paint();saveDraft();updateProgress()}},S.draft.essays[q.id]||"");
+    const paint=()=>{const n=len(ta.value);c.textContent=`${n} / ${q.max}字`;c.classList.toggle("over",n>q.max)}; paint(); box.append(h("div",{class:"ansbox"},ta,c));
+  }
+  return box;
+}
+function paper(v,mode,rec){ let no=0; for(const s of ["ichi","sel","essay"]){ const sec=h("section",{class:"sheet"},h("h2",{class:"part"},h("span",{class:"bigq"},SECTIONS[s].label),h("span",{class:"pts"},`（配点　${secMax(s)}）`)),h("p",{class:"sub"},SECTIONS[s].sub)); for(const q of ITEMS.filter(q=>q.s===s)){ no++; sec.append(q.type==="mc"?mcBlock(q,no,mode,rec):q.type==="fill"?fillBlock(q,no,mode,rec):aiBlock(q,no,mode,rec)); } v.append(sec); } }
+function renderTest(v){ paper(v,"test"); v.append(h("section",{class:"sheet center noprint"},h("p",{class:"note",id:"subNote"}),h("button",{class:"btn red",id:"submit",disabled:S.busy,onclick:()=>submit(false)},S.busy?"提出しています…":"答案を提出する（提出後の訂正はできません）"))); updateProgress(); }
+
+/* ============ 提出：採点 → Googleフォームへ送信（ログイン不要）→ 結果表示 ============ */
+async function sendToForm(rec){
+  if(!CFG.form.postUrl) throw new Error("送信先が未設定");
+  const fd=new FormData(); fd.append(CFG.form.entryName,rec.name); fd.append(CFG.form.entryData,JSON.stringify({id:rec.id,name:rec.name,startedAt:rec.startedAt,submittedAt:rec.submittedAt,answers:rec.answers,essays:rec.essays,auto:rec.auto,test:rec.test}));
+  await fetch(CFG.form.postUrl,{method:"POST",mode:"no-cors",body:fd});
+}
+async function submit(auto){
+  if(S.busy||!S.draft.startedAt||!ITEMS) return;
+  S.busy=true; render();
+  const rec={id:Math.random().toString(36).slice(2,12),name:S.draft.name.trim(),startedAt:S.draft.startedAt,submittedAt:new Date(Math.min(Date.now(),Date.parse(S.draft.startedAt)+CFG.limitMin*60000)).toISOString(),answers:S.draft.answers,essays:{},essayScores:{},auto:!!auto,test:!!S.draft.test};
+  for(const q of ITEMS) if(AI_TYPES.has(q.type)) rec.essays[q.id]=[...(S.draft.essays[q.id]||"")].slice(0,q.max).join("");
+  gradeRec(rec);
+  let sent=true; try{ await sendToForm(rec); }catch(e){ sent=false; }
+  rec.sent=sent;
+  S.rec=rec; try{ localStorage.setItem(DKEY+"-rec",JSON.stringify(rec)); localStorage.removeItem(DKEY); }catch(e){}
+  S.draft={name:rec.name,startedAt:null,answers:{},essays:{},test:S.draft.test};
+  S.busy=false; S.err=sent?"":"回答の送信に失敗しました（電波を確認して「もう一度送る」を押してください）。点数はこの画面で見られます。"; render(); scrollTo(0,0);
+  history.replaceState(null,"","?r="+b64u.enc(JSON.stringify({id:rec.id,name:rec.name,startedAt:rec.startedAt,submittedAt:rec.submittedAt,answers:rec.answers,essays:rec.essays,essayScores:rec.essayScores,auto:rec.auto,test:rec.test})));
+}
+function bar(l,v,max,c){return h("div",{class:"bar"},h("span",{},l),h("div",{class:"t"},h("i",{style:`width:${max?v/max*100:0}%;background:${c}`})),h("span",{class:"v"},`${v}/${max}`))}
+function renderResult(v,rec){
+  const sc=rec.sc, link=location.href;
+  v.append(h("section",{class:"sheet"},
+    h("div",{class:"result"},
+      h("div",{class:"stamp"},h("div",{class:"center"},h("b",{},String(Math.round(sc.total))),h("span",{},"点 / 100"))),
+      h("div",{},
+        h("p",{style:"margin:0;font-weight:700"},`${rec.name} さん　${rec.auto?"時間切れで自動提出":"提出済み"}　${new Date(rec.submittedAt).toLocaleString("ja-JP")}`),
+        rec.test?h("div",{class:"banner warn"},"テスト受験です（順位には入りません）。"):null,
+        h("div",{class:"bars"},bar("一問一答",sc.ichi,secMax("ichi"),"var(--blue)"),bar("選択",sc.sel,secMax("sel"),"var(--ok)"),bar("記述",sc.essay,secMax("essay"),"var(--red)")),
+        rec.status==="仮"?h("p",{class:"note",style:"margin:8px 0 0"},h("span",{class:"pill kw"},"記述は仮採点"),"　記述（第３問・問1）はキーワードで仮の点を付けています。採点係が見直して確定した点数は、後日お知らせします。"):h("p",{class:"note",style:"margin:8px 0 0"},h("span",{class:"pill done"},"採点確定")),
+        h("div",{class:"noprint"},
+          rec.sent===false?h("div",{class:"row",style:"margin-top:8px"},h("button",{class:"btn sm",onclick:async ev=>{const b=ev.currentTarget;b.disabled=true;b.textContent="送っています…";try{await sendToForm(rec);rec.sent=true;S.err="";render();}catch(e){b.disabled=false;b.textContent="もう一度送る";}}},"もう一度送る")):null,
+          h("p",{class:"note",style:"margin:8px 0 0"},"この答案は下のURLで後から見られます（スマホならブックマーク）。"),
+          h("div",{class:"linkbox"},link),
+          h("div",{class:"row",style:"margin-top:8px"},
+            h("button",{class:"btn ghost sm",onclick:async ev=>{const b=ev.currentTarget;try{await navigator.clipboard.writeText(link);b.textContent="コピーしました"}catch(e){b.textContent="長押しでコピーしてください"}}},"URLをコピー"),
+            h("button",{class:"btn ghost sm",onclick:()=>window.print()},"印刷／PDFに保存")))))));
+  if(!CFG.showKey) v.append(h("p",{class:"note center noprint"},"正解と解説は、管理者が公開したあとにこのURLで表示されます。"));
+  paper(v,"result",rec);
+}
+
+/* ============ 起動 ============ */
+(async()=>{
+  loadDraft();
+  try{ CFG={...CFG,...(await (await fetch("config.json?v="+Date.now())).json())}; }catch(e){}
+  render();
+  const r=PARAMS.get("r");
+  if(r){ try{ const rec=JSON.parse(b64u.dec(r)); if(!ITEMS){ if(S.pw){ try{ ITEMS=await decryptItems(S.pw); }catch(e){} } }
+      if(ITEMS){ S.rec=gradeRec(rec); render(); } else { S.err="答案を表示するには、表紙で合言葉を入れて「解答を始める」を押してください（答案はそのまま表示されます）。"; S.pendingRec=rec; render(); } }catch(e){} }
+  else if(S.draft.startedAt && S.pw){ try{ ITEMS=await decryptItems(S.pw); }catch(e){} render(); }
+})();
+// 合言葉入力後に答案を表示（?r= で開いたとき）
+const _start=start; start=async function(){ if(S.pendingRec){ S.busy=true; render(); try{ ITEMS=await decryptItems(S.pw); sessionStorage.setItem(DKEY+"-pw",S.pw); S.rec=gradeRec(S.pendingRec); S.pendingRec=null; S.err=""; }catch(e){ S.err="合言葉が違います。"; } S.busy=false; render(); return; } return _start(); };
+</script>
+</body></html>
