@@ -8,6 +8,8 @@
 @media print{ body{background:#fff;padding:0} .bar-top,.noprint{display:none!important} .sheet{box-shadow:none;border:1px solid #000;margin:0 0 10px} .q{break-inside:avoid} .result{break-inside:avoid} }
 .linkbox{font-family:var(--mono);font-size:12px;word-break:break-all;background:var(--fill);border:1px solid var(--rule-soft);padding:8px 10px;margin-top:8px}
 .pill.kw{background:var(--warn-soft);color:var(--warn)}
+.stem .blank{display:inline-block;white-space:nowrap;min-width:3.4em;text-align:center;border:1.5px solid var(--ink);padding:0 .4em;margin:0 .2em;line-height:1.5;font-weight:700}
+.stem{line-height:2}
 .pwbox{display:grid;grid-template-columns:auto 1fr;border:1.5px solid var(--ink);margin:10px auto 0;max-width:640px;text-align:left}
 .pwbox label{padding:10px 16px;font-weight:700;border-right:1.5px solid var(--ink);background:var(--fill);white-space:nowrap;letter-spacing:.2em}
 .pwbox input{border:0;border-radius:0;font-size:18px;padding:10px 14px;background:var(--paper);font-family:var(--mono)}
@@ -134,7 +136,8 @@ async function start(){
 }
 function isAnswered(q){ if(q.type==="mc") return S.draft.answers[q.id]!=null; if(q.type==="fill") return (S.draft.answers[q.id]||[]).filter(x=>x&&x.trim()).length===q.blanks.length; return len(S.draft.essays[q.id])>=(q.type==="short"?4:10); }
 function updateProgress(){ const total=ITEMS.length,n=ITEMS.filter(isAnswered).length; $("#progWrap").hidden=false; $("#progBar").style.width=(n/total*100)+"%"; const st=$("#subNote"); if(st) st.textContent=n<total?`未回答が ${total-n} 問あります（未回答は0点）。`:"すべて回答しました。"; }
-function head(q,no,extra){ return h("div",{class:"qhead"},h("span",{class:"qno"},`問${no}`),h("div",{class:"stem"},q.stem,q.src?h("span",{class:"tag"},q.src):null,q.type==="fill"?h("span",{class:"tag"},"穴埋め"):q.type==="short"?h("span",{class:"tag"},"一問一答"):null,AI_TYPES.has(q.type)?h("span",{class:"tag"},`${q.pts}点`):null),extra||null); }
+function stemNodes(s){ const out=[]; let last=0; const re=/（[\s　]*([①②③④]?)[\s　]*）/g; let m; while((m=re.exec(s))){ out.push(s.slice(last,m.index)); out.push(h("span",{class:"blank"},m[1]||"\u00a0")); last=m.index+m[0].length; } out.push(s.slice(last)); return out; }
+function head(q,no,extra){ return h("div",{class:"qhead"},h("span",{class:"qno"},`問${no}`),h("div",{class:"stem"},stemNodes(q.stem),q.src?h("span",{class:"tag"},q.src):null,q.type==="fill"?h("span",{class:"tag"},"穴埋め"):q.type==="short"?h("span",{class:"tag"},"一問一答"):null,AI_TYPES.has(q.type)?h("span",{class:"tag"},`${q.pts}点`):null),extra||null); }
 function mcBlock(q,no,mode,rec){
   const ord=order(q), chosen=mode==="result"?(rec.answers||{})[q.id]:S.draft.answers[q.id], reveal=mode==="result"&&CFG.showKey;
   const box=h("div",{class:"q"},head(q,no,mode==="result"?h("span",{class:"redpen"},chosen===0?"○":"×"):null),q.quote?h("div",{class:"quote"},q.quote):null);
