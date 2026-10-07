@@ -31,6 +31,7 @@
 /* ============ 設定（config.json）と問題（items.enc.json＝合言葉で復号） ============ */
 let CFG = {round:"第1回　2026年10月",limitMin:20,showKey:false,form:{postUrl:"",entryName:"",entryData:""}};
 let ITEMS = null;
+const BUILD = "2026-10-08 01:45";  /* 表紙に出す版（古いキャッシュを見ているか判別用） */
 const SECTIONS = { ichi:{label:"第１問",sub:"一問一答　言葉の定義・穴埋め・選択"}, sel:{label:"第２問",sub:"選択　MGとしてどう動く・どう返す"}, essay:{label:"第３問",sub:"記述　自分の言葉で説明する"} };
 const AI_TYPES = new Set(["short","essay"]);
 const PARAMS = new URLSearchParams(location.search);
@@ -123,7 +124,8 @@ function renderCover(v){
     h("div",{class:"pwbox"},h("label",{for:"pw"},"合言葉"),
       h("input",{type:"text",id:"pw",value:S.pw,autocomplete:"off",autocapitalize:"off",placeholder:"当日お伝えします",oninput:e=>{S.pw=e.target.value.trim();$("#go").disabled=!canStart()}})),
     h("div",{class:"center",style:"margin-top:20px"},
-      h("button",{class:"btn red",id:"go",disabled:!canStart(),onclick:start},S.busy?"問題を開いています…":`解答を始める（${CFG.limitMin}分）`))
+      h("button",{class:"btn red",id:"go",disabled:!canStart(),onclick:start},S.busy?"問題を開いています…":`解答を始める（${CFG.limitMin}分）`)),
+    h("div",{class:"note",style:"text-align:right;margin-top:14px;font-size:11px"},"版 "+BUILD)
   ));
 }
 const canStart=()=>S.draft.name.trim()&&S.pw&&!S.busy;
