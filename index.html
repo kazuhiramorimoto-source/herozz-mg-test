@@ -31,7 +31,7 @@
 /* ============ 設定（config.json）と問題（items.enc.json＝合言葉で復号） ============ */
 let CFG = {round:"第1回　2026年10月",limitMin:20,showKey:false,form:{postUrl:"",entryName:"",entryData:""}};
 let ITEMS = null;
-const BUILD = "2026-10-08 01:45";  /* 表紙に出す版（古いキャッシュを見ているか判別用） */
+const BUILD = "2026-10-08 01:55";  /* 表紙に出す版（古いキャッシュを見ているか判別用） */
 const SECTIONS = { ichi:{label:"第１問",sub:"一問一答　言葉の定義・穴埋め・選択"}, sel:{label:"第２問",sub:"選択　MGとしてどう動く・どう返す"}, essay:{label:"第３問",sub:"記述　自分の言葉で説明する"} };
 const AI_TYPES = new Set(["short","essay"]);
 const PARAMS = new URLSearchParams(location.search);
@@ -145,7 +145,7 @@ function mcBlock(q,no,mode,rec){
   const box=h("div",{class:"q"},head(q,no,mode==="result"?h("span",{class:"redpen"},chosen===0?"○":"×"):null),q.quote?h("div",{class:"quote"},q.quote):null);
   const opts=h("div",{class:"opts",role:"radiogroup","aria-label":`問${no}`});
   ord.forEach((ai,k)=>{ const id=`${q.id}_${ai}`; let cls="opt"; if(reveal){ if(ai===0) cls+=" right"; else if(ai===chosen) cls+=" wrong"; } else if(mode==="result"&&ai===chosen) cls+=" "+(ai===0?"right":"wrong");
-    opts.append(h("label",{class:cls,for:id},h("input",{type:"radio",name:q.id,id,checked:chosen===ai,disabled:mode==="result",onchange:()=>{S.draft.answers[q.id]=ai;saveDraft();updateProgress()}}),h("span",{class:"k"},KANA[k]),h("span",{},q.ans[ai]))); });
+    opts.append(h("label",{class:cls,for:id},h("input",{type:"radio",name:q.id,id,checked:chosen===ai,disabled:mode==="result",onchange:()=>{S.draft.answers[q.id]=ai;saveDraft();updateProgress()}}),h("span",{class:"k"},KANA[k]),h("span",{class:"t"},q.ans[ai]))); });
   box.append(opts); if(reveal&&q.exp) box.append(h("div",{class:"exp"},q.exp)); return box;
 }
 function fillBlock(q,no,mode,rec){

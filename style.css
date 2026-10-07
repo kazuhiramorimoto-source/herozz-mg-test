@@ -23,7 +23,7 @@
 }
 *{box-sizing:border-box}
 body{background:var(--desk);color:var(--ink);font-family:var(--serif);font-size:15.5px;line-height:1.85;padding-inline:16px;padding-block:0 72px}
-.wrap{max-width:820px;margin:0 auto}
+.wrap{max-width:900px;margin:0 auto}
 /* 上部：受験票のような帯 */
 .bar-top{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--desk);padding-block:10px 8px}
 .strip{display:flex;flex-wrap:wrap;gap:8px 16px;align-items:center;justify-content:space-between;background:var(--paper);border:1.5px solid var(--ink);padding:8px 14px}
@@ -62,18 +62,20 @@ h3.grp{font-size:14px;font-weight:700;margin:26px 0 6px;padding:3px 10px;backgro
 .q:last-child{border-bottom:0}
 .qhead{display:flex;gap:12px;align-items:flex-start}
 .qno{flex:none;font-family:var(--serif);font-weight:800;font-size:14px;border:1.5px solid var(--ink);min-width:3em;text-align:center;padding:0 6px;margin-top:3px;line-height:1.7;letter-spacing:.1em}
-.stem{font-weight:700;white-space:pre-wrap;font-family:var(--serif)}
+.stem{font-weight:700;white-space:pre-wrap;font-family:var(--serif);text-wrap:pretty}
 .tag{font-size:11px;color:var(--muted);border:1px solid var(--rule-soft);padding:0 6px;margin-left:6px;white-space:nowrap;font-weight:400;font-family:var(--sans);vertical-align:middle}
-.quote{margin:10px 0 8px 3.6em;padding:10px 14px;border:1px solid var(--ink);background:var(--fill);white-space:pre-wrap;font-size:15px}
-.data{margin:8px 0 8px 3.6em;overflow-x:auto}
+.quote{margin:10px 0 8px 2.6em;padding:10px 14px;border:1px solid var(--ink);background:var(--fill);white-space:pre-wrap;font-size:15px}
+.data{margin:8px 0 8px 2.6em;overflow-x:auto}
 .data table{border-collapse:collapse;font-size:13.5px;min-width:100%}
 .data td{border:1px solid var(--ink);padding:5px 10px;vertical-align:top}
 .data td:first-child{background:var(--fill);font-weight:700;white-space:nowrap;width:9em}
 /* 選択肢＝マークシート。①②③④ を塗る */
-.opts{display:grid;gap:2px;margin:10px 0 0 3.6em}
+.opts{display:grid;gap:2px;margin:10px 0 0 2.6em}
 .opt{display:flex;gap:12px;align-items:flex-start;padding:6px 10px;border:1px solid transparent;cursor:pointer}
 .opt:hover{background:var(--fill)}
 .opt .k{flex:none;font-family:var(--serif);font-weight:700;width:1.7em;height:1.7em;border:1.5px solid var(--ink);border-radius:50%;display:grid;place-items:center;font-size:13px;margin-top:3px;background:var(--paper)}
+.opt .t{flex:1 1 auto;min-width:0;text-wrap:pretty}
+@media (min-width:700px){.opt .t{text-wrap:balance}}
 .opt input{position:absolute;opacity:0;pointer-events:none}
 .opt:has(input:checked) .k{background:var(--ink);color:var(--paper)}
 .opt:has(input:checked){border-color:var(--ink);background:var(--fill)}
@@ -82,17 +84,17 @@ h3.grp{font-size:14px;font-weight:700;margin:26px 0 6px;padding:3px 10px;backgro
 .opt.wrong{border-color:var(--ng);background:var(--ng-soft)}
 /* 赤ペン */
 .redpen{font-family:var(--pen);color:var(--red);font-size:30px;line-height:1;margin-left:auto;flex:none;transform:rotate(-8deg)}
-.exp{margin:8px 0 0 3.6em;font-size:13.5px;color:var(--muted);padding:6px 10px;border-left:3px solid var(--red);font-family:var(--sans)}
-.key{margin:8px 0 0 3.6em;font-size:13.5px;padding:6px 10px;border-left:3px solid var(--ok);background:var(--ok-soft);font-family:var(--sans)}
+.exp{margin:8px 0 0 2.6em;font-size:13.5px;color:var(--muted);padding:6px 10px;border-left:3px solid var(--red);font-family:var(--sans)}
+.key{margin:8px 0 0 2.6em;font-size:13.5px;padding:6px 10px;border-left:3px solid var(--ok);background:var(--ok-soft);font-family:var(--sans)}
 .penscore{font-family:var(--pen);color:var(--red);font-size:20px;margin-right:8px}
 .pencomment{font-family:var(--pen);color:var(--red);font-size:16px;line-height:1.6}
-.ansbox{margin:8px 0 0 3.6em}
+.ansbox{margin:8px 0 0 2.6em}
 textarea,input[type=text],input[type=number],select{font:inherit;color:var(--ink);background:var(--paper);border:1px solid var(--ink);border-radius:0;padding:10px 12px;width:100%}
 textarea{min-height:120px;resize:vertical;background-image:repeating-linear-gradient(transparent,transparent 27px,var(--rule-soft) 27px,var(--rule-soft) 28px);line-height:28px}
 textarea:focus,input:focus,select:focus{outline:2px solid var(--blue);outline-offset:1px}
 .count{font-family:var(--mono);font-size:12px;color:var(--muted);text-align:right}
 .count.over{color:var(--red)}
-.fill{display:grid;gap:6px;margin:10px 0 0 3.6em}
+.fill{display:grid;gap:6px;margin:10px 0 0 2.6em}
 .fill label{display:grid;grid-template-columns:2.2em 1fr;gap:8px;align-items:center;font-family:var(--serif);font-weight:700}
 .fill input{font-family:var(--sans);font-weight:400}
 .fill .got{font-family:var(--sans);font-weight:400;background:var(--fill);padding:6px 10px;border:1px solid var(--rule-soft)}
@@ -135,5 +137,5 @@ tr.me td{background:var(--fill)}
 .ans-text{white-space:pre-wrap;background:var(--fill);padding:8px 12px;font-size:14px;border:1px solid var(--rule-soft)}
 details.person{border:1px solid var(--ink);padding:10px 14px;margin:8px 0;background:var(--paper)}
 details.person summary{cursor:pointer;font-weight:700;font-family:var(--sans)}
-.rubric{font-size:13px;color:var(--muted);margin:6px 0 0 3.6em;padding-left:1.2em;font-family:var(--sans)}
+.rubric{font-size:13px;color:var(--muted);margin:6px 0 0 2.6em;padding-left:1.2em;font-family:var(--sans)}
 @media (prefers-reduced-motion: reduce){*{transition:none!important}}
