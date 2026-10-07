@@ -31,7 +31,7 @@
 /* ============ 設定（config.json）と問題（items.enc.json＝合言葉で復号） ============ */
 let CFG = {round:"第1回　2026年10月",limitMin:20,showKey:false,form:{postUrl:"",entryName:"",entryData:""}};
 let ITEMS = null;
-const BUILD = "2026-10-08 01:55";  /* 表紙に出す版（古いキャッシュを見ているか判別用） */
+const BUILD = "2026-10-08 02:10";  /* 表紙に出す版（古いキャッシュを見ているか判別用） */
 const SECTIONS = { ichi:{label:"第１問",sub:"一問一答　言葉の定義・穴埋め・選択"}, sel:{label:"第２問",sub:"選択　MGとしてどう動く・どう返す"}, essay:{label:"第３問",sub:"記述　自分の言葉で説明する"} };
 const AI_TYPES = new Set(["short","essay"]);
 const PARAMS = new URLSearchParams(location.search);
@@ -80,7 +80,8 @@ async function decryptItems(pw){
 /* ============ 状態（この端末だけ） ============ */
 const DKEY="mgtest-pages-r1";
 const S={ draft:{name:"",startedAt:null,answers:{},essays:{},test:PARAMS.get("test")==="1"}, rec:null, busy:false, err:"", pw:"" };
-function loadDraft(){ try{ const d=JSON.parse(localStorage.getItem(DKEY)||"null"); if(d) S.draft={...S.draft,...d}; S.pw=sessionStorage.getItem(DKEY+"-pw")||""; }catch(e){} }
+function loadDraft(){ try{ const d=JSON.parse(localStorage.getItem(DKEY)||"null"); if(d) S.draft={...S.draft,...d}; S.pw=localStorage.getItem(DKEY+"-pw")||sessionStorage.getItem(DKEY+"-pw")||""; }catch(e){} }
+function savePw(){ try{ localStorage.setItem(DKEY+"-pw",S.pw); sessionStorage.setItem(DKEY+"-pw",S.pw); }catch(e){} }
 let lsT; function saveDraft(){ clearTimeout(lsT); lsT=setTimeout(()=>{try{localStorage.setItem(DKEY,JSON.stringify(S.draft))}catch(e){}},200); }
 
 /* ============ タイマー ============ */
@@ -102,6 +103,8 @@ function render(){
 }
 const cnt=(s,t)=>ITEMS?ITEMS.filter(q=>q.s===s&&(!t||q.type===t)).length:0;
 function renderCover(v){
+  const resume=!!S.draft.startedAt, ms=Math.max(0,remaining());
+  const startedStr=resume?new Date(S.draft.startedAt).toLocaleTimeString("ja-JP",{hour:"2-digit",minute:"2-digit"}):"";
   v.append(h("section",{class:"sheet cover"},
     h("div",{class:"kai"},CFG.round),
     h("h1",{},"マネージャー定例テスト"),
@@ -119,12 +122,15 @@ function renderCover(v){
       h("li",{},"穴埋めは空欄ごとに採点する。言葉が少し違っても、意味が合っていれば正解とする。"),
       h("li",{},`「解答を始める」を押すと${CFG.limitMin}分の計測が始まる。途中で閉じても計測は止まらない。`),
       h("li",{},"時間になると、その時点の解答で自動的に提出される。提出後の訂正はできない。"))),
+    resume?h("div",{class:"banner warn",style:"text-align:left;max-width:640px;margin:20px auto 0"},
+      ms>0?`${S.draft.name||"あなた"}さんの受験中の答案があります（${startedStr} 開始・残り ${fmt(ms)}）。時間は止まっていません。合言葉を入れて「続きから再開する」を押してください。解答は保存されています。`
+          :`試験時間が終了しています。合言葉を入れて押すと、保存されている解答でそのまま提出されます。`):null,
     h("div",{class:"namebox"},h("label",{for:"nm"},"氏名"),
       h("input",{type:"text",id:"nm",value:S.draft.name,autocomplete:"name",placeholder:"MG名（例：まめりん）",oninput:e=>{S.draft.name=e.target.value;saveDraft();$("#go").disabled=!canStart()}})),
     h("div",{class:"pwbox"},h("label",{for:"pw"},"合言葉"),
       h("input",{type:"text",id:"pw",value:S.pw,autocomplete:"off",autocapitalize:"off",placeholder:"当日お伝えします",oninput:e=>{S.pw=e.target.value.trim();$("#go").disabled=!canStart()}})),
     h("div",{class:"center",style:"margin-top:20px"},
-      h("button",{class:"btn red",id:"go",disabled:!canStart(),onclick:start},S.busy?"問題を開いています…":`解答を始める（${CFG.limitMin}分）`)),
+      h("button",{class:"btn red",id:"go",disabled:!canStart(),onclick:start},S.busy?"問題を開いています…":resume?(ms>0?"続きから再開する":"保存した解答で提出する"):`解答を始める（${CFG.limitMin}分）`)),
     h("div",{class:"note",style:"text-align:right;margin-top:14px;font-size:11px"},"版 "+BUILD)
   ));
 }
@@ -132,7 +138,7 @@ const canStart=()=>S.draft.name.trim()&&S.pw&&!S.busy;
 async function start(){
   S.busy=true; S.err=""; render();
   try{ ITEMS=await decryptItems(S.pw); }catch(e){ S.busy=false; S.err="合言葉が違います。"; render(); return; }
-  try{ sessionStorage.setItem(DKEY+"-pw",S.pw); }catch(e){}
+  savePw();
   if(!S.draft.startedAt){ S.draft.startedAt=new Date().toISOString(); saveDraft(); }
   S.busy=false; render(); scrollTo(0,0);
 }
@@ -207,7 +213,8 @@ function renderResult(v,rec){
           h("div",{class:"linkbox"},link),
           h("div",{class:"row",style:"margin-top:8px"},
             h("button",{class:"btn ghost sm",onclick:async ev=>{const b=ev.currentTarget;try{await navigator.clipboard.writeText(link);b.textContent="コピーしました"}catch(e){b.textContent="長押しでコピーしてください"}}},"URLをコピー"),
-            h("button",{class:"btn ghost sm",onclick:()=>window.print()},"印刷／PDFに保存")))))));
+            h("button",{class:"btn ghost sm",onclick:()=>window.print()},"印刷／PDFに保存")),
+          h("p",{class:"note",style:"margin:14px 0 0"},h("a",{href:"#",style:"color:var(--muted)",onclick:e=>{e.preventDefault(); if(!confirm("この端末に保存された答案を消して、表紙に戻ります。送信済みの点数は消えません。よろしいですか？")) return; try{ localStorage.removeItem(DKEY+"-rec"); localStorage.removeItem(DKEY); }catch(x){} S.rec=null; S.pendingRec=null; S.err=""; S.draft={name:"",startedAt:null,answers:{},essays:{},test:PARAMS.get("test")==="1"}; history.replaceState(null,"",location.pathname+(S.draft.test?"?test=1":"")); render(); scrollTo(0,0);}},"この端末で別の人が受験する（保存した答案を消す）")))))));
   if(!CFG.showKey) v.append(h("p",{class:"note center noprint"},"正解と解説は、管理者が公開したあとにこのURLで表示されます。"));
   paper(v,"result",rec);
 }
@@ -221,8 +228,11 @@ function renderResult(v,rec){
   if(r){ try{ const rec=JSON.parse(b64u.dec(r)); if(!ITEMS){ if(S.pw){ try{ ITEMS=await decryptItems(S.pw); }catch(e){} } }
       if(ITEMS){ S.rec=gradeRec(rec); render(); } else { S.err="答案を表示するには、表紙で合言葉を入れて「解答を始める」を押してください（答案はそのまま表示されます）。"; S.pendingRec=rec; render(); } }catch(e){} }
   else if(S.draft.startedAt && S.pw){ try{ ITEMS=await decryptItems(S.pw); }catch(e){} render(); }
+  else if(!S.draft.startedAt){ try{ const rec=JSON.parse(localStorage.getItem(DKEY+"-rec")||"null");
+      if(rec&&rec.submittedAt){ if(!ITEMS&&S.pw){ try{ ITEMS=await decryptItems(S.pw); }catch(e){} }
+        if(ITEMS){ S.rec=gradeRec(rec); history.replaceState(null,"","?r="+b64u.enc(JSON.stringify({id:rec.id,name:rec.name,startedAt:rec.startedAt,submittedAt:rec.submittedAt,answers:rec.answers,essays:rec.essays,essayScores:rec.essayScores,auto:rec.auto,test:rec.test}))); render(); } else { S.err="この端末で提出済みの答案があります。表紙で合言葉を入れて「解答を始める」を押すと、その答案が表示されます。"; S.pendingRec=rec; render(); } } }catch(e){} }
 })();
 // 合言葉入力後に答案を表示（?r= で開いたとき）
-const _start=start; start=async function(){ if(S.pendingRec){ S.busy=true; render(); try{ ITEMS=await decryptItems(S.pw); sessionStorage.setItem(DKEY+"-pw",S.pw); S.rec=gradeRec(S.pendingRec); S.pendingRec=null; S.err=""; }catch(e){ S.err="合言葉が違います。"; } S.busy=false; render(); return; } return _start(); };
+const _start=start; start=async function(){ if(S.pendingRec){ S.busy=true; render(); try{ ITEMS=await decryptItems(S.pw); savePw(); S.rec=gradeRec(S.pendingRec); S.pendingRec=null; S.err=""; }catch(e){ S.err="合言葉が違います。"; } S.busy=false; render(); return; } return _start(); };
 </script>
 </body></html>
