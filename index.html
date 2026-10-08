@@ -31,7 +31,7 @@
 /* ============ 設定（config.json）と問題（items.enc.json＝合言葉で復号） ============ */
 let CFG = {round:"第1回　2026年10月",limitMin:20,showKey:false,form:{postUrl:"",entryName:"",entryData:""}};
 let ITEMS = null;
-const BUILD = "2026-10-08 17:20";
+const BUILD = "2026-10-08 17:40";
 /* 管理者（config.json の adminNames）が受験した場合はテスト受験＝順位に入れず、スプシの別タブに保存される */
 const isAdminName = n => { const v=String(n||"").normalize("NFKC").toLowerCase().replace(/[\s　（）()]/g,""); return !!v && (CFG.adminNames||[]).some(a=>String(a).normalize("NFKC").toLowerCase().replace(/[\s　（）()]/g,"")===v); };
 const isTestRun = () => !!S.draft.test || isAdminName(S.draft.name);  /* 表紙に出す版（古いキャッシュを見ているか判別用） */
@@ -205,7 +205,7 @@ async function submit(auto){
   gradeRec(rec);
   let sent=true; try{ await sendToForm(rec); }catch(e){ sent=false; }
   rec.sent=sent;
-  S.rec=rec; try{ localStorage.setItem(DKEY+"-rec",JSON.stringify(rec)); localStorage.removeItem(DKEY); }catch(e){}
+  S.rec=rec; try{ if(rec.test) localStorage.removeItem(DKEY+"-rec"); else localStorage.setItem(DKEY+"-rec",JSON.stringify(rec)); localStorage.removeItem(DKEY); }catch(e){}
   S.draft={name:rec.name,startedAt:null,answers:{},essays:{},test:S.draft.test};
   S.busy=false; S.err=sent?"":"回答の送信に失敗しました（電波を確認して「もう一度送る」を押してください）。点数はこの画面で見られます。"; render(); scrollTo(0,0);
   history.replaceState(null,"","?r="+b64u.enc(JSON.stringify({id:rec.id,name:rec.name,startedAt:rec.startedAt,submittedAt:rec.submittedAt,answers:rec.answers,essays:rec.essays,essayScores:rec.essayScores,auto:rec.auto,test:rec.test})));
@@ -228,7 +228,7 @@ function renderResult(v,rec){
           h("div",{class:"row",style:"margin-top:8px"},
             h("button",{class:"btn ghost sm",onclick:async ev=>{const b=ev.currentTarget;try{await navigator.clipboard.writeText(link);b.textContent="コピーしました"}catch(e){b.textContent="長押しでコピーしてください"}}},"URLをコピー"),
             h("button",{class:"btn ghost sm",onclick:()=>window.print()},"印刷／PDFに保存")),
-          h("p",{class:"note",style:"margin:14px 0 0"},h("a",{href:"#",style:"color:var(--muted)",onclick:e=>{e.preventDefault(); if(!confirm("この端末に保存された答案を消して、表紙に戻ります。送信済みの点数は消えません。よろしいですか？")) return; try{ localStorage.removeItem(DKEY+"-rec"); localStorage.removeItem(DKEY); }catch(x){} S.rec=null; S.pendingRec=null; S.err=""; S.draft={name:"",startedAt:null,answers:{},essays:{},test:PARAMS.get("test")==="1"}; history.replaceState(null,"",location.pathname+(S.draft.test?"?test=1":"")); render(); scrollTo(0,0);}},"この端末で別の人が受験する（保存した答案を消す）")))))));
+          h("p",{class:"note",style:"margin:14px 0 0"},h(rec.test?"button":"a",rec.test?{class:"btn sm",type:"button",onclick:e=>{e.preventDefault(); if(!confirm("この端末に保存された答案を消して、表紙に戻ります。送信済みの点数は消えません。よろしいですか？")) return; try{ localStorage.removeItem(DKEY+"-rec"); localStorage.removeItem(DKEY); }catch(x){} S.rec=null; S.pendingRec=null; S.err=""; S.draft={name:rec.test?rec.name:"",startedAt:null,answers:{},essays:{},test:PARAMS.get("test")==="1"}; history.replaceState(null,"",location.pathname+(S.draft.test?"?test=1":"")); render(); scrollTo(0,0);}}:{href:"#",style:"color:var(--muted)",onclick:e=>{e.preventDefault(); if(!confirm("この端末に保存された答案を消して、表紙に戻ります。送信済みの点数は消えません。よろしいですか？")) return; try{ localStorage.removeItem(DKEY+"-rec"); localStorage.removeItem(DKEY); }catch(x){} S.rec=null; S.pendingRec=null; S.err=""; S.draft={name:"",startedAt:null,answers:{},essays:{},test:PARAMS.get("test")==="1"}; history.replaceState(null,"",location.pathname+(S.draft.test?"?test=1":"")); render(); scrollTo(0,0);}},rec.test?"もう一度受ける（テスト受験・表紙に戻る）":"この端末で別の人が受験する（保存した答案を消す）")))))));
   if(!CFG.showKey) v.append(h("p",{class:"note center noprint"},"正解と解説は、管理者が公開したあとにこのURLで表示されます。"));
   paper(v,"result",rec);
 }
@@ -247,7 +247,8 @@ function renderResult(v,rec){
       if(ITEMS){ S.rec=gradeRec(rec); render(); } else { S.err="答案を表示するには、表紙で合言葉を入れて「解答を始める」を押してください（答案はそのまま表示されます）。"; S.pendingRec=rec; render(); } }catch(e){} }
   else if(S.draft.startedAt && S.pw){ try{ ITEMS=await decryptItems(S.pw); }catch(e){} render(); }
   else if(!S.draft.startedAt){ try{ const rec=JSON.parse(localStorage.getItem(DKEY+"-rec")||"null");
-      if(rec&&rec.submittedAt){ if(!ITEMS&&S.pw){ try{ ITEMS=await decryptItems(S.pw); }catch(e){} }
+      if(rec&&rec.submittedAt&&rec.test){ try{ localStorage.removeItem(DKEY+"-rec"); }catch(e){} }
+      else if(rec&&rec.submittedAt){ if(!ITEMS&&S.pw){ try{ ITEMS=await decryptItems(S.pw); }catch(e){} }
         if(ITEMS){ S.rec=gradeRec(rec); history.replaceState(null,"","?r="+b64u.enc(JSON.stringify({id:rec.id,name:rec.name,startedAt:rec.startedAt,submittedAt:rec.submittedAt,answers:rec.answers,essays:rec.essays,essayScores:rec.essayScores,auto:rec.auto,test:rec.test}))); render(); } else { S.err="この端末で提出済みの答案があります。表紙で合言葉を入れて「解答を始める」を押すと、その答案が表示されます。"; S.pendingRec=rec; render(); } } }catch(e){} }
 })();
 // 合言葉入力後に答案を表示（?r= で開いたとき）
