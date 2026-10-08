@@ -31,7 +31,7 @@
 /* ============ 設定（config.json）と問題（items.enc.json＝合言葉で復号） ============ */
 let CFG = {round:"第1回　2026年10月",limitMin:20,showKey:false,form:{postUrl:"",entryName:"",entryData:""}};
 let ITEMS = null;
-const BUILD = "2026-10-08 18:25";
+const BUILD = "2026-10-08 18:40";
 /* 管理者（config.json の adminNames）が受験した場合はテスト受験＝順位に入れず、スプシの別タブに保存される */
 const isAdminName = n => { const v=String(n||"").normalize("NFKC").toLowerCase().replace(/[\s　（）()]/g,""); return !!v && (CFG.adminNames||[]).some(a=>String(a).normalize("NFKC").toLowerCase().replace(/[\s　（）()]/g,"")===v); };
 const isTestRun = () => !!S.draft.test || isAdminName(S.draft.name);  /* 表紙に出す版（古いキャッシュを見ているか判別用） */
@@ -116,7 +116,7 @@ function renderCover(v){
       h("tr",{},h("td",{},"試験時間"),h("td",{},`${CFG.limitMin}分（開始で計測）`)),
       h("tr",{},h("td",{},"第１問"),h("td",{},"一問一答・穴埋め・選択　30点")),
       h("tr",{},h("td",{},"第２問"),h("td",{},"選択　16点")),
-      h("tr",{},h("td",{},"第３問"),h("td",{},"記述　6問×9点＝54点")),
+      h("tr",{},h("td",{},"第３問"),h("td",{},"記述　6問×9点＝54点（指定の言葉を使って書く）")),
       h("tr",{},h("td",{},"結果"),h("td",{},"提出後に自分の点数と採点が出る（順位は管理者が確認）")),
       isTestRun()?h("tr",{},h("td",{},"受験の扱い"),h("td",{},"テスト受験（管理者・順位に入らない）")):null)),
     h("div",{class:"notice"},h("div",{class:"notice-h"},"注意事項"),h("ol",{class:"rules"},
@@ -167,7 +167,7 @@ function fillBlock(q,no,mode,rec){
 }
 function aiBlock(q,no,mode,rec){
   const box=h("div",{class:"q"},head(q,no),q.quote?h("div",{class:"quote"},q.quote):null,
-    q.hints&&(mode==="result"?CFG.showKey:CFG.showHints)?h("div",{class:"hints"},h("b",{},`採点の観点（この${q.hints.length}つが入っていれば満点）`),h("ol",{},q.hints.map(x=>h("li",{},x)))):null);
+    q.keywords?h("div",{class:"kws"},h("b",{},"次の言葉をすべて使って書いてください"),h("div",{class:"chips"},q.keywords.map(x=>h("span",{class:"chip"},x)))):null);
   if(mode==="result"){
     box.append(h("div",{class:"ansbox"},h("div",{class:"ans-text"},(rec.essays||{})[q.id]||"（未回答）")));
     const sc=(rec.essayScores||{})[q.id];
