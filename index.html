@@ -31,7 +31,7 @@
 /* ============ 設定（config.json）と問題（items.enc.json＝合言葉で復号） ============ */
 let CFG = {round:"第1回　2026年10月",limitMin:20,showKey:false,form:{postUrl:"",entryName:"",entryData:""}};
 let ITEMS = null;
-const BUILD = "2026-10-08 16:30";
+const BUILD = "2026-10-08 17:20";
 /* 管理者（config.json の adminNames）が受験した場合はテスト受験＝順位に入れず、スプシの別タブに保存される */
 const isAdminName = n => { const v=String(n||"").normalize("NFKC").toLowerCase().replace(/[\s　（）()]/g,""); return !!v && (CFG.adminNames||[]).some(a=>String(a).normalize("NFKC").toLowerCase().replace(/[\s　（）()]/g,"")===v); };
 const isTestRun = () => !!S.draft.test || isAdminName(S.draft.name);  /* 表紙に出す版（古いキャッシュを見ているか判別用） */
@@ -237,6 +237,10 @@ function renderResult(v,rec){
 (async()=>{
   loadDraft();
   try{ CFG={...CFG,...(await (await fetch("config.json?v="+Date.now())).json())}; }catch(e){}
+  /* 時間切れなのに何も答えていない下書き（開いただけで放置）は、0点の答案として出さずに捨てる */
+  if(S.draft.startedAt && remaining()<=0 && !Object.keys(S.draft.answers||{}).length && !Object.values(S.draft.essays||{}).some(v=>v&&String(v).trim())){
+    S.draft={name:S.draft.name,startedAt:null,answers:{},essays:{},test:S.draft.test}; try{ localStorage.removeItem(DKEY); }catch(e){}
+  }
   render();
   const r=PARAMS.get("r");
   if(r){ try{ const rec=JSON.parse(b64u.dec(r)); if(!ITEMS){ if(S.pw){ try{ ITEMS=await decryptItems(S.pw); }catch(e){} } }
