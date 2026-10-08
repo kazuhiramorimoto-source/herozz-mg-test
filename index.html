@@ -31,7 +31,7 @@
 /* ============ 設定（config.json）と問題（items.enc.json＝合言葉で復号） ============ */
 let CFG = {round:"第1回　2026年10月",limitMin:20,showKey:false,form:{postUrl:"",entryName:"",entryData:""}};
 let ITEMS = null;
-const BUILD = "2026-10-08 17:40";
+const BUILD = "2026-10-08 17:50";
 /* 管理者（config.json の adminNames）が受験した場合はテスト受験＝順位に入れず、スプシの別タブに保存される */
 const isAdminName = n => { const v=String(n||"").normalize("NFKC").toLowerCase().replace(/[\s　（）()]/g,""); return !!v && (CFG.adminNames||[]).some(a=>String(a).normalize("NFKC").toLowerCase().replace(/[\s　（）()]/g,"")===v); };
 const isTestRun = () => !!S.draft.test || isAdminName(S.draft.name);  /* 表紙に出す版（古いキャッシュを見ているか判別用） */
@@ -208,11 +208,11 @@ async function submit(auto){
   S.rec=rec; try{ if(rec.test) localStorage.removeItem(DKEY+"-rec"); else localStorage.setItem(DKEY+"-rec",JSON.stringify(rec)); localStorage.removeItem(DKEY); }catch(e){}
   S.draft={name:rec.name,startedAt:null,answers:{},essays:{},test:S.draft.test};
   S.busy=false; S.err=sent?"":"回答の送信に失敗しました（電波を確認して「もう一度送る」を押してください）。点数はこの画面で見られます。"; render(); scrollTo(0,0);
-  history.replaceState(null,"","?r="+b64u.enc(JSON.stringify({id:rec.id,name:rec.name,startedAt:rec.startedAt,submittedAt:rec.submittedAt,answers:rec.answers,essays:rec.essays,essayScores:rec.essayScores,auto:rec.auto,test:rec.test})));
+  if(location.search) history.replaceState(null,"",location.pathname);
 }
 function bar(l,v,max,c){return h("div",{class:"bar"},h("span",{},l),h("div",{class:"t"},h("i",{style:`width:${max?v/max*100:0}%;background:${c}`})),h("span",{class:"v"},`${v}/${max}`))}
 function renderResult(v,rec){
-  const sc=rec.sc, link=location.href;
+  const sc=rec.sc, link=location.origin+location.pathname+"?r="+b64u.enc(JSON.stringify({id:rec.id,name:rec.name,startedAt:rec.startedAt,submittedAt:rec.submittedAt,answers:rec.answers,essays:rec.essays,essayScores:rec.essayScores,auto:rec.auto,test:rec.test}));
   v.append(h("section",{class:"sheet"},
     h("div",{class:"result"},
       h("div",{class:"stamp"},h("div",{class:"center"},h("b",{},String(Math.round(sc.total))),h("span",{},"点 / 100"))),
@@ -249,7 +249,7 @@ function renderResult(v,rec){
   else if(!S.draft.startedAt){ try{ const rec=JSON.parse(localStorage.getItem(DKEY+"-rec")||"null");
       if(rec&&rec.submittedAt&&rec.test){ try{ localStorage.removeItem(DKEY+"-rec"); }catch(e){} }
       else if(rec&&rec.submittedAt){ if(!ITEMS&&S.pw){ try{ ITEMS=await decryptItems(S.pw); }catch(e){} }
-        if(ITEMS){ S.rec=gradeRec(rec); history.replaceState(null,"","?r="+b64u.enc(JSON.stringify({id:rec.id,name:rec.name,startedAt:rec.startedAt,submittedAt:rec.submittedAt,answers:rec.answers,essays:rec.essays,essayScores:rec.essayScores,auto:rec.auto,test:rec.test}))); render(); } else { S.err="この端末で提出済みの答案があります。表紙で合言葉を入れて「解答を始める」を押すと、その答案が表示されます。"; S.pendingRec=rec; render(); } } }catch(e){} }
+        if(ITEMS){ S.rec=gradeRec(rec); render(); } else { S.err="この端末で提出済みの答案があります。表紙で合言葉を入れて「解答を始める」を押すと、その答案が表示されます。"; S.pendingRec=rec; render(); } } }catch(e){} }
 })();
 // 合言葉入力後に答案を表示（?r= で開いたとき）
 const _start=start; start=async function(){ if(S.pendingRec){ S.busy=true; render(); try{ ITEMS=await decryptItems(S.pw); savePw(); S.rec=gradeRec(S.pendingRec); S.pendingRec=null; S.err=""; }catch(e){ S.err="合言葉が違います。"; } S.busy=false; render(); return; } return _start(); };
