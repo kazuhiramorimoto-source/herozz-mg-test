@@ -31,7 +31,10 @@
 /* ============ 設定（config.json）と問題（items.enc.json＝合言葉で復号） ============ */
 let CFG = {round:"第1回　2026年10月",limitMin:20,showKey:false,form:{postUrl:"",entryName:"",entryData:""}};
 let ITEMS = null;
-const BUILD = "2026-10-08 16:05";  /* 表紙に出す版（古いキャッシュを見ているか判別用） */
+const BUILD = "2026-10-08 16:30";
+/* 管理者（config.json の adminNames）が受験した場合はテスト受験＝順位に入れず、スプシの別タブに保存される */
+const isAdminName = n => { const v=String(n||"").normalize("NFKC").toLowerCase().replace(/[\s　（）()]/g,""); return !!v && (CFG.adminNames||[]).some(a=>String(a).normalize("NFKC").toLowerCase().replace(/[\s　（）()]/g,"")===v); };
+const isTestRun = () => !!S.draft.test || isAdminName(S.draft.name);  /* 表紙に出す版（古いキャッシュを見ているか判別用） */
 const SECTIONS = { ichi:{label:"第１問",sub:"一問一答　言葉の定義・穴埋め・選択"}, sel:{label:"第２問",sub:"選択　MGとしてどう動く・どう返す"}, essay:{label:"第３問",sub:"記述　自分の言葉で説明する"} };
 const AI_TYPES = new Set(["short","essay"]);
 const PARAMS = new URLSearchParams(location.search);
@@ -115,7 +118,7 @@ function renderCover(v){
       h("tr",{},h("td",{},"第２問"),h("td",{},"選択　16点")),
       h("tr",{},h("td",{},"第３問"),h("td",{},"記述　6問×9点＝54点（書く観点4つ付き）")),
       h("tr",{},h("td",{},"結果"),h("td",{},"提出後に自分の点数と採点が出る（順位は管理者が確認）")),
-      S.draft.test?h("tr",{},h("td",{},"受験の扱い"),h("td",{},"テスト受験（順位に入らない）")):null)),
+      isTestRun()?h("tr",{},h("td",{},"受験の扱い"),h("td",{},"テスト受験（管理者・順位に入らない）")):null)),
     h("div",{class:"notice"},h("div",{class:"notice-h"},"注意事項"),h("ol",{class:"rules"},
       h("li",{},"教科書・講義資料・AIは使わずに、自分の言葉で解答すること。"),
       h("li",{},"選択問題は、①〜④のうち正しいものを一つ選んで塗ること。"),
@@ -126,7 +129,8 @@ function renderCover(v){
       ms>0?`${S.draft.name||"あなた"}さんの受験中の答案があります（${startedStr} 開始・残り ${fmt(ms)}）。時間は止まっていません。合言葉を入れて「続きから再開する」を押してください。解答は保存されています。`
           :`試験時間が終了しています。合言葉を入れて押すと、保存されている解答でそのまま提出されます。`):null,
     h("div",{class:"namebox"},h("label",{for:"nm"},"氏名"),
-      h("input",{type:"text",id:"nm",value:S.draft.name,autocomplete:"name",placeholder:"MG名（例：まめりん）",oninput:e=>{S.draft.name=e.target.value;saveDraft();$("#go").disabled=!canStart()}})),
+      h("input",{type:"text",id:"nm",value:S.draft.name,autocomplete:"name",placeholder:"MG名（例：まめりん）",oninput:e=>{S.draft.name=e.target.value;saveDraft();$("#go").disabled=!canStart();const w=isAdminName(S.draft.name);$("#adminNote").hidden=!w;}})),
+    h("p",{class:"note",id:"adminNote",hidden:!isAdminName(S.draft.name),style:"max-width:640px;margin:6px auto 0;text-align:left"},"この名前は管理者として登録されています。テスト受験（順位に入らず、スプシの「管理者テスト受験」タブに保存）になります。"),
     h("div",{class:"pwbox"},h("label",{for:"pw"},"合言葉"),
       h("input",{type:"text",id:"pw",value:S.pw,autocomplete:"off",autocapitalize:"off",placeholder:"当日お伝えします",oninput:e=>{S.pw=e.target.value.trim();$("#go").disabled=!canStart()}})),
     h("div",{class:"center",style:"margin-top:20px"},
@@ -196,7 +200,7 @@ async function sendToForm(rec){
 async function submit(auto){
   if(S.busy||!S.draft.startedAt||!ITEMS) return;
   S.busy=true; render();
-  const rec={id:Math.random().toString(36).slice(2,12),name:S.draft.name.trim(),startedAt:S.draft.startedAt,submittedAt:new Date(Math.min(Date.now(),Date.parse(S.draft.startedAt)+CFG.limitMin*60000)).toISOString(),answers:S.draft.answers,essays:{},essayScores:{},auto:!!auto,test:!!S.draft.test};
+  const rec={id:Math.random().toString(36).slice(2,12),name:S.draft.name.trim(),startedAt:S.draft.startedAt,submittedAt:new Date(Math.min(Date.now(),Date.parse(S.draft.startedAt)+CFG.limitMin*60000)).toISOString(),answers:S.draft.answers,essays:{},essayScores:{},auto:!!auto,test:isTestRun()};
   for(const q of ITEMS) if(AI_TYPES.has(q.type)) rec.essays[q.id]=[...(S.draft.essays[q.id]||"")].slice(0,q.max).join("");
   gradeRec(rec);
   let sent=true; try{ await sendToForm(rec); }catch(e){ sent=false; }
@@ -214,7 +218,7 @@ function renderResult(v,rec){
       h("div",{class:"stamp"},h("div",{class:"center"},h("b",{},String(Math.round(sc.total))),h("span",{},"点 / 100"))),
       h("div",{},
         h("p",{style:"margin:0;font-weight:700"},`${rec.name} さん　${rec.auto?"時間切れで自動提出":"提出済み"}　${new Date(rec.submittedAt).toLocaleString("ja-JP")}`),
-        rec.test?h("div",{class:"banner warn"},"テスト受験です（順位には入りません）。"):null,
+        rec.test?h("div",{class:"banner warn"},"テスト受験です（順位には入りません・スプシの「管理者テスト受験」タブに保存）。"):null,
         h("div",{class:"bars"},bar("一問一答",sc.ichi,secMax("ichi"),"var(--blue)"),bar("選択",sc.sel,secMax("sel"),"var(--ok)"),bar("記述",sc.essay,secMax("essay"),"var(--red)")),
         rec.status==="仮"?h("p",{class:"note",style:"margin:8px 0 0"},h("span",{class:"pill kw"},"記述は仮採点"),"　記述（第３問・問1）はキーワードで仮の点を付けています。採点係が見直して確定した点数は、後日お知らせします。"):h("p",{class:"note",style:"margin:8px 0 0"},h("span",{class:"pill done"},"採点確定")),
         h("div",{class:"noprint"},
