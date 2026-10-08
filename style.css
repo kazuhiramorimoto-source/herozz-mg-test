@@ -84,7 +84,7 @@ h3.grp{font-size:14px;font-weight:700;margin:26px 0 6px;padding:3px 10px;backgro
 .opt.wrong{border-color:var(--ng);background:var(--ng-soft)}
 /* 赤ペン */
 .redpen{font-family:var(--pen);color:var(--red);font-size:30px;line-height:1;margin-left:auto;flex:none;transform:rotate(-8deg)}
-.exp{margin:8px 0 0 2.6em;font-size:13.5px;color:var(--muted);padding:6px 10px;border-left:3px solid var(--red);font-family:var(--sans)}
+.exp{margin:8px 0 0 2.6em;font-size:13.5px;color:var(--muted);padding:6px 10px;border-left:3px solid var(--red);font-family:var(--sans);white-space:pre-wrap}
 .key{margin:8px 0 0 2.6em;font-size:13.5px;padding:6px 10px;border-left:3px solid var(--ok);background:var(--ok-soft);font-family:var(--sans)}
 .penscore{font-family:var(--pen);color:var(--red);font-size:20px;margin-right:8px}
 .pencomment{font-family:var(--pen);color:var(--red);font-size:16px;line-height:1.6}
