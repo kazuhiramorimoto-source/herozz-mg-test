@@ -31,7 +31,7 @@
 /* ============ 設定（config.json）と問題（items.enc.json＝合言葉で復号） ============ */
 let CFG = {round:"第1回　2026年10月",limitMin:20,showKey:false,form:{postUrl:"",entryName:"",entryData:""}};
 let ITEMS = null;
-const BUILD = "2026-10-08 02:10";  /* 表紙に出す版（古いキャッシュを見ているか判別用） */
+const BUILD = "2026-10-08 15:35";  /* 表紙に出す版（古いキャッシュを見ているか判別用） */
 const SECTIONS = { ichi:{label:"第１問",sub:"一問一答　言葉の定義・穴埋め・選択"}, sel:{label:"第２問",sub:"選択　MGとしてどう動く・どう返す"}, essay:{label:"第３問",sub:"記述　自分の言葉で説明する"} };
 const AI_TYPES = new Set(["short","essay"]);
 const PARAMS = new URLSearchParams(location.search);
@@ -142,7 +142,7 @@ async function start(){
   if(!S.draft.startedAt){ S.draft.startedAt=new Date().toISOString(); saveDraft(); }
   S.busy=false; render(); scrollTo(0,0);
 }
-function isAnswered(q){ if(q.type==="mc") return S.draft.answers[q.id]!=null; if(q.type==="fill") return (S.draft.answers[q.id]||[]).filter(x=>x&&x.trim()).length===q.blanks.length; return len(S.draft.essays[q.id])>=(q.type==="short"?4:10); }
+function isAnswered(q){ if(q.type==="mc") return S.draft.answers[q.id]!=null; if(q.type==="fill") return (S.draft.answers[q.id]||[]).filter(x=>x&&x.trim()).length===q.blanks.length; if(q.parts){ const a=(S.draft.essayParts||{})[q.id]||[]; return q.parts.every((pt,i)=>len(a[i])>=4); } return len(S.draft.essays[q.id])>=(q.type==="short"?4:10); }
 function updateProgress(){ const total=ITEMS.length,n=ITEMS.filter(isAnswered).length; $("#progWrap").hidden=false; $("#progBar").style.width=(n/total*100)+"%"; const st=$("#subNote"); if(st) st.textContent=n<total?`未回答が ${total-n} 問あります（未回答は0点）。`:"すべて回答しました。"; }
 function stemNodes(s){ const out=[]; let last=0; const re=/（[\s　]*([①②③④]?)[\s　]*）/g; let m; while((m=re.exec(s))){ out.push(s.slice(last,m.index)); out.push(h("span",{class:"blank"},m[1]||"\u00a0")); last=m.index+m[0].length; } out.push(s.slice(last)); return out; }
 function head(q,no,extra){ return h("div",{class:"qhead"},h("span",{class:"qno"},`問${no}`),h("div",{class:"stem"},stemNodes(q.stem),q.src?h("span",{class:"tag"},q.src):null,q.type==="fill"?h("span",{class:"tag"},"穴埋め"):q.type==="short"?h("span",{class:"tag"},"一問一答"):null,AI_TYPES.has(q.type)?h("span",{class:"tag"},`${q.pts}点`):null),extra||null); }
@@ -168,6 +168,15 @@ function aiBlock(q,no,mode,rec){
     const sc=(rec.essayScores||{})[q.id];
     box.append(sc?h("div",{class:"exp"},h("span",{class:"penscore"},`${Math.round(sc.score/rMax(q)*q.pts*10)/10}／${q.pts}点`),sc.by==="kw"?h("span",{class:"pill kw"},"仮採点"):null,h("span",{class:"pencomment"},sc.comment||""),sc.items&&CFG.showKey?h("div",{},q.rubric.map((x,i)=>`${x.t}…${sc.items[i]}/${x.p}`).join("\n")):null):h("div",{class:"exp"},h("span",{class:"pill wait"},"採点中")));
     if(CFG.showKey) box.append(h("div",{class:"key"},"模範解答："+q.key),h("ul",{class:"rubric"},q.rubric.map(x=>h("li",{},`${x.t}（${x.p}）`)),q.zero?h("li",{},q.zero):null));
+  } else if(q.parts){
+    /* 課題／対策のように欄を分ける。保存は essays[q.id] に「【課題】…\n【対策】…」の1本の文として持つ（採点側はそのまま読める） */
+    const ep=S.draft.essayParts||(S.draft.essayParts={}), arr=ep[q.id]||(ep[q.id]=q.parts.map(()=>""));
+    const sync=()=>{ S.draft.essays[q.id]=q.parts.map((pt,i)=>arr[i].trim()?`【${pt.label}】${arr[i].trim()}`:"").filter(Boolean).join("\n"); };
+    const wrap=h("div",{class:"ansbox parts"});
+    q.parts.forEach((pt,i)=>{ const c=h("div",{class:"count"}); const ta=h("textarea",{id:`es_${q.id}_${i}`,maxlength:String(pt.max),placeholder:`${pt.label}（${pt.max}字以内）`,style:"min-height:72px",oninput:ev=>{arr[i]=ev.target.value;sync();paint();saveDraft();updateProgress()}},arr[i]||"");
+      const paint=()=>{const n=len(ta.value);c.textContent=`${n} / ${pt.max}字`;c.classList.toggle("over",n>pt.max)}; paint();
+      wrap.append(h("div",{class:"part"},h("div",{class:"part-l"},pt.label),ta,c)); });
+    sync(); box.append(wrap);
   } else {
     const c=h("div",{class:"count"}); const ta=h("textarea",{id:"es_"+q.id,maxlength:String(q.max),placeholder:`${q.max}字以内`,style:q.type==="short"?"min-height:72px":null,oninput:ev=>{S.draft.essays[q.id]=ev.target.value;paint();saveDraft();updateProgress()}},S.draft.essays[q.id]||"");
     const paint=()=>{const n=len(ta.value);c.textContent=`${n} / ${q.max}字`;c.classList.toggle("over",n>q.max)}; paint(); box.append(h("div",{class:"ansbox"},ta,c));

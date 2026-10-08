@@ -134,6 +134,9 @@ tr.me td{background:var(--fill)}
 .row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
 .toggle{display:flex;align-items:center;gap:8px;font-weight:700;font-family:var(--sans)}
 .toggle input{width:18px;height:18px;accent-color:var(--ink)}
+.parts .part{display:grid;grid-template-columns:4.5em 1fr;gap:4px 10px;align-items:start;margin-top:8px}
+.parts .part-l{font-weight:700;font-family:var(--serif);border:1.5px solid var(--ink);text-align:center;padding:2px 0;margin-top:2px}
+.parts .part .count{grid-column:2}
 .ans-text{white-space:pre-wrap;background:var(--fill);padding:8px 12px;font-size:14px;border:1px solid var(--rule-soft)}
 details.person{border:1px solid var(--ink);padding:10px 14px;margin:8px 0;background:var(--paper)}
 details.person summary{cursor:pointer;font-weight:700;font-family:var(--sans)}
