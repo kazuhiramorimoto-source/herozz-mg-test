@@ -31,7 +31,7 @@
 /* ============ 設定（config.json）と問題（items.enc.json＝合言葉で復号） ============ */
 let CFG = {round:"第1回　2026年10月",limitMin:20,showKey:false,form:{postUrl:"",entryName:"",entryData:""}};
 let ITEMS = null;
-const BUILD = "2026-10-08 15:35";  /* 表紙に出す版（古いキャッシュを見ているか判別用） */
+const BUILD = "2026-10-08 16:05";  /* 表紙に出す版（古いキャッシュを見ているか判別用） */
 const SECTIONS = { ichi:{label:"第１問",sub:"一問一答　言葉の定義・穴埋め・選択"}, sel:{label:"第２問",sub:"選択　MGとしてどう動く・どう返す"}, essay:{label:"第３問",sub:"記述　自分の言葉で説明する"} };
 const AI_TYPES = new Set(["short","essay"]);
 const PARAMS = new URLSearchParams(location.search);
@@ -113,7 +113,7 @@ function renderCover(v){
       h("tr",{},h("td",{},"試験時間"),h("td",{},`${CFG.limitMin}分（開始で計測）`)),
       h("tr",{},h("td",{},"第１問"),h("td",{},"一問一答・穴埋め・選択　30点")),
       h("tr",{},h("td",{},"第２問"),h("td",{},"選択　16点")),
-      h("tr",{},h("td",{},"第３問"),h("td",{},"記述（80〜100字以内）　54点")),
+      h("tr",{},h("td",{},"第３問"),h("td",{},"記述　6問×9点＝54点（書く観点4つ付き）")),
       h("tr",{},h("td",{},"結果"),h("td",{},"提出後に自分の点数と採点が出る（順位は管理者が確認）")),
       S.draft.test?h("tr",{},h("td",{},"受験の扱い"),h("td",{},"テスト受験（順位に入らない）")):null)),
     h("div",{class:"notice"},h("div",{class:"notice-h"},"注意事項"),h("ol",{class:"rules"},
@@ -162,7 +162,8 @@ function fillBlock(q,no,mode,rec){
   box.append(wrap); if(reveal) box.append(h("div",{class:"key"},"正解："+q.key),q.exp?h("div",{class:"exp"},q.exp):null); return box;
 }
 function aiBlock(q,no,mode,rec){
-  const box=h("div",{class:"q"},head(q,no),q.quote?h("div",{class:"quote"},q.quote):null);
+  const box=h("div",{class:"q"},head(q,no),q.quote?h("div",{class:"quote"},q.quote):null,
+    q.hints?h("div",{class:"hints"},h("b",{},"書く観点（この4つが入っていれば満点）"),h("ol",{},q.hints.map(x=>h("li",{},x)))):null);
   if(mode==="result"){
     box.append(h("div",{class:"ansbox"},h("div",{class:"ans-text"},(rec.essays||{})[q.id]||"（未回答）")));
     const sc=(rec.essayScores||{})[q.id];
