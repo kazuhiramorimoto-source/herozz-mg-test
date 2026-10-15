@@ -55,13 +55,13 @@ table.rank tr.me td{background:var(--red-soft);font-weight:700}
 /* ============ 設定（config.json）と問題（items.enc.json＝合言葉で復号） ============ */
 let CFG = {round:"第2回",limitMin:10,closed:false,showKey:false,form:{postUrl:"",entryName:"",entryData:""}};
 let ITEMS = null;
-const BUILD = "2026-10-15 第2回 v10";
+const BUILD = "2026-10-15 第2回 v11";
 /* 管理者（config.json の adminNames）が受験した場合はテスト受験＝順位に入れず、スプシの別タブに保存される */
 const isAdminName = n => { const v=String(n||"").normalize("NFKC").toLowerCase().replace(/[\s　（）()]/g,""); return !!v && (CFG.adminNames||[]).some(a=>String(a).normalize("NFKC").toLowerCase().replace(/[\s　（）()]/g,"")===v); };
 /* 管理者メール（config.json の adminEmails）は何回でも受けられる＝テスト受験（順位に入らない・合格済みチェックもしない） */
 const isAdminEmail = e => { const v=String(e||"").normalize("NFKC").trim().toLowerCase(); return !!v && (CFG.adminEmails||[]).some(a=>String(a).trim().toLowerCase()===v); };
 const isTestRun = () => !!S.draft.test || isAdminName(S.draft.name) || isAdminEmail(S.draft.email);  /* 表紙に出す版（古いキャッシュを見ているか判別用） */
-const SECTIONS = { ichi:{label:"第１問",sub:"一問一答　言葉の定義・穴埋め・選択"}, sel:{label:"第２問",sub:"選択　MGとしてどう返す"}, essay:{label:"第２問",sub:"記述　MGとしてどう返す（指定の言葉をすべて使って書く）"} };
+const SECTIONS = { ichi:{label:"第１問",sub:"一問一答　言葉の定義・穴埋め・選択"}, sel:{label:"第２問",sub:"選択　MGとしてどう返す"}, essay:{label:"第２問",sub:"記述　台本を見る・言葉で説明する・提案する"} };
 const AI_TYPES = new Set(["short","essay"]);
 const PARAMS = new URLSearchParams(location.search);
 
@@ -152,7 +152,7 @@ function renderCover(v){
     h("table",{class:"spec"},h("tbody",{},
       h("tr",{},h("td",{},"試験時間"),h("td",{},`${CFG.limitMin}分（開始で計測）`)),
       h("tr",{},h("td",{},"第１問"),h("td",{},"一問一答・穴埋め・選択　8問×2点＝16点")),
-      h("tr",{},h("td",{},"第２問"),h("td",{},"記述　3問×4点＝12点（指定の言葉を使って80字以内）")),
+      h("tr",{},h("td",{},"第２問"),h("td",{},"記述　3問×4点＝12点（足りないもの／定義／提案）")),
       h("tr",{},h("td",{},"満点"),h("td",{},"28点（記述は提出時に仮の点・採点後に確定）")),
       h("tr",{},h("td",{},"結果"),h("td",{},"提出後に自分の点数と採点が出る（順位は管理者が確認）")),
       h("tr",{},h("td",{},"追試"),h("td",{},`${passPts()}点以上で合格（合格したメールでは追試不可）`)),
@@ -161,7 +161,7 @@ function renderCover(v){
       h("li",{},"講義資料・AIは見ずに解答すること。"),
       h("li",{},"選択問題は、①〜④のうち正しいものを一つ選んで塗ること。"),
       h("li",{},"穴埋めは空欄ごとに採点する。言葉が少し違っても、意味が合っていれば正解とする。"),
-      h("li",{},"記述は、指定の言葉をすべて使って80字以内で書くこと。"),
+      h("li",{},"記述は字数内で書くこと。指定の言葉がある問題は、その言葉をすべて使うこと。"),
       h("li",{},`「解答を始める」を押すと${CFG.limitMin}分の計測が始まる。途中で閉じても計測は止まらない。`),
       h("li",{},`${CFG.limitMin}分たつと解答はストップし、その時点の解答で自動的に提出される。提出後の訂正はできない。`))),
     CFG.closed?h("div",{class:"banner err",style:"max-width:640px;margin:20px auto 0"},"このテストの受付は終了しました。"):null,
