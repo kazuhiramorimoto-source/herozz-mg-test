@@ -12,10 +12,14 @@
 .stem{line-height:2}
 .nw{display:inline-block;white-space:nowrap}
 .cover .theme{font-family:var(--serif);font-weight:700;font-size:16px;letter-spacing:.15em;margin:8px 0 2px}
-.namebox+.namebox{margin-top:0;border-top:0}
-.namebox input[type=email]{font-family:var(--mono);font-size:16px}
-.namebox input{min-width:0}
-.namebox label[for=em]{letter-spacing:.1em;text-indent:.1em}
+.formbox{max-width:640px;margin:20px auto 0;border:1.5px solid var(--ink);text-align:left}
+.frow{display:grid;grid-template-columns:7em minmax(0,1fr)}
+.frow+.frow{border-top:1px solid var(--ink)}
+.frow label{display:flex;align-items:center;justify-content:center;padding:10px 8px;font-weight:700;font-family:var(--serif);background:var(--fill);border-right:1.5px solid var(--ink);white-space:nowrap;letter-spacing:.2em}
+.frow input{width:100%;min-width:0;border:0;border-radius:0;font-size:17px;padding:10px 14px;background:var(--paper);font-family:var(--sans)}
+.frow input#em,.frow input#pw{font-family:var(--mono);font-size:16px}
+.cover table.spec{width:100%;max-width:640px}
+.cover table.spec td:first-child{width:7em}
 .sentok{display:flex;gap:8px;align-items:center;font-weight:700;color:var(--ok);margin:10px 0 0}
 .passline{margin:10px 0 0;padding:8px 12px;border:1.5px solid var(--ink);font-weight:700;display:inline-block}
 .passline.ok{border-color:var(--ok);color:var(--ok);background:var(--ok-soft)}
@@ -41,7 +45,7 @@
 /* ============ 設定（config.json）と問題（items.enc.json＝合言葉で復号） ============ */
 let CFG = {round:"第2回",limitMin:10,closed:false,showKey:false,form:{postUrl:"",entryName:"",entryData:""}};
 let ITEMS = null;
-const BUILD = "2026-10-15 第2回 v3";
+const BUILD = "2026-10-15 第2回 v4";
 /* 管理者（config.json の adminNames）が受験した場合はテスト受験＝順位に入れず、スプシの別タブに保存される */
 const isAdminName = n => { const v=String(n||"").normalize("NFKC").toLowerCase().replace(/[\s　（）()]/g,""); return !!v && (CFG.adminNames||[]).some(a=>String(a).normalize("NFKC").toLowerCase().replace(/[\s　（）()]/g,"")===v); };
 const isTestRun = () => !!S.draft.test || isAdminName(S.draft.name);  /* 表紙に出す版（古いキャッシュを見ているか判別用） */
@@ -135,7 +139,7 @@ function renderCover(v){
       h("tr",{},h("td",{},"第２問"),h("td",{},"選択　3問×2点＝6点（MGとしてどう返す）")),
       h("tr",{},h("td",{},"満点"),h("td",{},"22点（記述なし・提出した瞬間に点数が確定）")),
       h("tr",{},h("td",{},"結果"),h("td",{},"提出後に自分の点数と採点が出る（順位は管理者が確認）")),
-      h("tr",{},h("td",{},"追試"),h("td",{},`${passPts()}点（満点の${Math.round((CFG.passRatio||0.5)*100)}%）以上で合格。合格したメールアドレスでは追試を受けられない（メールは追試の管理にだけ使う）`)),
+      h("tr",{},h("td",{},"追試"),h("td",{},`${passPts()}点以上で合格（合格したメールでは追試不可）`)),
       isTestRun()?h("tr",{},h("td",{},"受験の扱い"),h("td",{},"テスト受験（管理者・順位に入らない）")):null)),
     h("div",{class:"notice"},h("div",{class:"notice-h"},"注意事項"),h("ol",{class:"rules"},
       h("li",{},"講義資料・AIは見ずに解答すること。"),
@@ -147,13 +151,14 @@ function renderCover(v){
     resume?h("div",{class:"banner warn",style:"text-align:left;max-width:640px;margin:20px auto 0"},
       ms>0?`${S.draft.name||"あなた"}さんの受験中の答案があります（${startedStr} 開始・残り ${fmt(ms)}）。時間は止まっていません。合言葉を入れて「続きから再開する」を押してください。解答は保存されています。`
           :`試験時間が終了しています。合言葉を入れて押すと、保存されている解答でそのまま提出されます。`):null,
-    h("div",{class:"namebox"},h("label",{for:"nm"},"氏名"),
-      h("input",{type:"text",id:"nm",value:S.draft.name,autocomplete:"name",placeholder:"MG名（例：まめりん）",oninput:e=>{S.draft.name=e.target.value;saveDraft();$("#go").disabled=!canStart();const w=isAdminName(S.draft.name);$("#adminNote").hidden=!w;}})),
-    h("div",{class:"namebox"},h("label",{for:"em"},"メール"),
-      h("input",{type:"email",id:"em",value:S.draft.email||"",autocomplete:"email",inputmode:"email",autocapitalize:"off",placeholder:"例：xxxx@gmail.com",disabled:!!S.draft.startedAt,oninput:e=>{S.draft.email=e.target.value.trim();saveDraft();$("#go").disabled=!canStart();}})),
+    h("div",{class:"formbox"},
+      h("div",{class:"frow"},h("label",{for:"nm"},"氏名"),
+        h("input",{type:"text",id:"nm",value:S.draft.name,autocomplete:"name",placeholder:"MG名（例：まめりん）",oninput:e=>{S.draft.name=e.target.value;saveDraft();$("#go").disabled=!canStart();const w=isAdminName(S.draft.name);$("#adminNote").hidden=!w;}})),
+      h("div",{class:"frow"},h("label",{for:"em"},"メール"),
+        h("input",{type:"email",id:"em",value:S.draft.email||"",autocomplete:"email",inputmode:"email",autocapitalize:"off",placeholder:"例：xxxx@gmail.com",disabled:!!S.draft.startedAt,oninput:e=>{S.draft.email=e.target.value.trim();saveDraft();$("#go").disabled=!canStart();}})),
+      h("div",{class:"frow"},h("label",{for:"pw"},"合言葉"),
+        h("input",{type:"text",id:"pw",value:S.pw,autocomplete:"off",autocapitalize:"off",placeholder:"当日お伝えします",oninput:e=>{S.pw=e.target.value.trim();$("#go").disabled=!canStart()}}))),
     h("p",{class:"note",id:"adminNote",hidden:!isAdminName(S.draft.name),style:"max-width:640px;margin:6px auto 0;text-align:left"},"この名前は管理者として登録されています。テスト受験（順位に入らず、スプシの「管理者テスト受験」タブに保存）になります。"),
-    h("div",{class:"pwbox"},h("label",{for:"pw"},"合言葉"),
-      h("input",{type:"text",id:"pw",value:S.pw,autocomplete:"off",autocapitalize:"off",placeholder:"当日お伝えします",oninput:e=>{S.pw=e.target.value.trim();$("#go").disabled=!canStart()}})),
     h("div",{class:"center",style:"margin-top:20px"},
       h("button",{class:"btn red",id:"go",disabled:!canStart(),onclick:start},S.busy?"問題を開いています…":resume?(ms>0?"続きから再開する":"保存した解答で提出する"):`解答を始める（${CFG.limitMin}分）`)),
     h("div",{class:"note",style:"text-align:right;margin-top:14px;font-size:11px"},"版 "+BUILD)
