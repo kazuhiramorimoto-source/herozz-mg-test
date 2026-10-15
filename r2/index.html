@@ -55,7 +55,7 @@ table.rank tr.me td{background:var(--red-soft);font-weight:700}
 /* ============ 設定（config.json）と問題（items.enc.json＝合言葉で復号） ============ */
 let CFG = {round:"第2回",limitMin:12,closed:false,showKey:false,form:{postUrl:"",entryName:"",entryData:""}};
 let ITEMS = null;
-const BUILD = "2026-10-15 第2回 v15";
+const BUILD = "2026-10-15 第2回 v16";
 /* 管理者（config.json の adminNames）が受験した場合はテスト受験＝順位に入れず、スプシの別タブに保存される */
 const isAdminName = n => { const v=String(n||"").normalize("NFKC").toLowerCase().replace(/[\s　（）()]/g,""); return !!v && (CFG.adminNames||[]).some(a=>String(a).normalize("NFKC").toLowerCase().replace(/[\s　（）()]/g,"")===v); };
 /* 管理者メール（config.json の adminEmails）は何回でも受けられる＝テスト受験（順位に入らない・合格済みチェックもしない） */
@@ -269,7 +269,7 @@ function renderResult(v,rec){
         h("div",{class:"bars"},bar("一問一答",sc.ichi,secMax("ichi"),"var(--blue)"),secMax("sel")?bar("選択",sc.sel,secMax("sel"),"var(--ok)"):null,secMax("essay")&&rec.status!=="仮"?bar("記述",sc.essay,secMax("essay"),"var(--red)"):null),
         
         rec.test||rec.status==="仮"?null:h("div",{class:"passline "+(sc.total>=passPts()?"ok":"ng")},sc.total>=passPts()?`合格（${passPts()}点以上）`:`追試の対象です（合格は${passPts()}点以上）`),
-        rec.status==="仮"?h("p",{class:"note",style:"margin:8px 0 0"},h("span",{class:"pill kw"},"記述を採点しています"),`　第１問は${sc.ichi}点。記述を採点中です（2〜4分で点数と講評が出ます・この画面は自動で更新されます）。`):h("p",{class:"note",style:"margin:8px 0 0"},h("span",{class:"pill done"},"採点確定")),
+        rec.status==="仮"?h("p",{class:"note",style:"margin:8px 0 0"},h("span",{class:"pill kw"},"記述を採点しています"),`　第１問は${sc.ichi}点。記述を採点中です（30秒ほどで点数と講評が出ます・この画面は自動で更新されます）。`):h("p",{class:"note",style:"margin:8px 0 0"},h("span",{class:"pill done"},"採点確定")),
         rec.sent!==false?h("p",{class:"sentok"},"✓ 答案は送信されました。この画面は閉じて大丈夫です。"):null,
         h("div",{class:"noprint"},
           rec.sent===false?h("div",{class:"row",style:"margin-top:8px"},h("button",{class:"btn sm",onclick:async ev=>{const b=ev.currentTarget;b.disabled=true;b.textContent="送っています…";try{await sendToForm(rec);rec.sent=true;S.err="";render();}catch(e){b.disabled=false;b.textContent="もう一度送る";}}},"もう一度送る")):null,
@@ -283,6 +283,20 @@ function renderResult(v,rec){
 
 /* ============ 順位（rank.enc.json＝集計シートから1分ごとに自動更新・合言葉で復号） ============ */
 async function loadRank(){ if(!S.pw) return; try{ S.rank=await decryptFile("rank.enc.json",S.pw); }catch(e){} applyConfirmed(); }
+/* 自分の答案の採点結果（r2/g/<答案ID>.json）を GitHub API から直接読む＝ページ公開を待たずに数秒で届く */
+const GH_API="https://api.github.com/repos/kazuhiramorimoto-source/herozz-mg-test/contents/r2/g/";
+async function pollMine(){
+  const rec=S.rec; if(!rec||rec.status!=="仮"||!S.pw||S.ghStop) return false;
+  try{ const r=await fetch(GH_API+rec.id+".json?t="+Date.now(),{headers:{Accept:"application/vnd.github.raw"},cache:"no-store"});
+    if(r.status===403||r.status===429){ S.ghStop=true; return false; } if(!r.ok) return false;
+    const blob=await r.json(); const km=await crypto.subtle.importKey("raw",new TextEncoder().encode(S.pw),"PBKDF2",false,["deriveKey"]);
+    const key=await crypto.subtle.deriveKey({name:"PBKDF2",salt:fromB64(blob.s),iterations:100000,hash:"SHA-256"},km,{name:"AES-GCM",length:256},false,["decrypt"]);
+    const g=JSON.parse(new TextDecoder().decode(await crypto.subtle.decrypt({name:"AES-GCM",iv:fromB64(blob.iv)},key,fromB64(blob.d))));
+    S.rank=S.rank||{rows:[]}; S.rank.scores=S.rank.scores||{}; S.rank.scores[rec.id]={e:g.e,st:"確定"};
+    return applyConfirmed();
+  }catch(e){ return false; }
+}
+setInterval(async()=>{ if(await pollMine()){ S.confirmedNow=false; const y=scrollY; render(); scrollTo(0,y); loadRank(); } },4000);
 /* スプシ側（Macの自動採点）で確定した記述の点と講評を、自分の答案に反映する */
 function applyConfirmed(){
   const rec=S.rec, x=rec&&S.rank&&S.rank.scores&&S.rank.scores[rec.id]; if(!x||rec.status!=="仮") return false;
