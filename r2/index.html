@@ -14,6 +14,8 @@
 .cover .theme{font-family:var(--serif);font-weight:700;font-size:16px;letter-spacing:.15em;margin:8px 0 2px}
 .namebox+.namebox{margin-top:0;border-top:0}
 .namebox input[type=email]{font-family:var(--mono);font-size:16px}
+.namebox input{min-width:0}
+.namebox label[for=em]{letter-spacing:.1em;text-indent:.1em}
 .sentok{display:flex;gap:8px;align-items:center;font-weight:700;color:var(--ok);margin:10px 0 0}
 .passline{margin:10px 0 0;padding:8px 12px;border:1.5px solid var(--ink);font-weight:700;display:inline-block}
 .passline.ok{border-color:var(--ok);color:var(--ok);background:var(--ok-soft)}
@@ -39,7 +41,7 @@
 /* ============ 設定（config.json）と問題（items.enc.json＝合言葉で復号） ============ */
 let CFG = {round:"第2回",limitMin:10,closed:false,showKey:false,form:{postUrl:"",entryName:"",entryData:""}};
 let ITEMS = null;
-const BUILD = "2026-10-15 第2回 v2";
+const BUILD = "2026-10-15 第2回 v3";
 /* 管理者（config.json の adminNames）が受験した場合はテスト受験＝順位に入れず、スプシの別タブに保存される */
 const isAdminName = n => { const v=String(n||"").normalize("NFKC").toLowerCase().replace(/[\s　（）()]/g,""); return !!v && (CFG.adminNames||[]).some(a=>String(a).normalize("NFKC").toLowerCase().replace(/[\s　（）()]/g,"")===v); };
 const isTestRun = () => !!S.draft.test || isAdminName(S.draft.name);  /* 表紙に出す版（古いキャッシュを見ているか判別用） */
@@ -133,7 +135,7 @@ function renderCover(v){
       h("tr",{},h("td",{},"第２問"),h("td",{},"選択　3問×2点＝6点（MGとしてどう返す）")),
       h("tr",{},h("td",{},"満点"),h("td",{},"22点（記述なし・提出した瞬間に点数が確定）")),
       h("tr",{},h("td",{},"結果"),h("td",{},"提出後に自分の点数と採点が出る（順位は管理者が確認）")),
-      h("tr",{},h("td",{},"追試"),h("td",{},`${passPts()}点（満点の${Math.round((CFG.passRatio||0.5)*100)}%）以上は合格。合格したメールアドレスでは追試を受けられない`)),
+      h("tr",{},h("td",{},"追試"),h("td",{},`${passPts()}点（満点の${Math.round((CFG.passRatio||0.5)*100)}%）以上で合格。合格したメールアドレスでは追試を受けられない（メールは追試の管理にだけ使う）`)),
       isTestRun()?h("tr",{},h("td",{},"受験の扱い"),h("td",{},"テスト受験（管理者・順位に入らない）")):null)),
     h("div",{class:"notice"},h("div",{class:"notice-h"},"注意事項"),h("ol",{class:"rules"},
       h("li",{},"講義資料・AIは見ずに解答すること。"),
@@ -148,7 +150,7 @@ function renderCover(v){
     h("div",{class:"namebox"},h("label",{for:"nm"},"氏名"),
       h("input",{type:"text",id:"nm",value:S.draft.name,autocomplete:"name",placeholder:"MG名（例：まめりん）",oninput:e=>{S.draft.name=e.target.value;saveDraft();$("#go").disabled=!canStart();const w=isAdminName(S.draft.name);$("#adminNote").hidden=!w;}})),
     h("div",{class:"namebox"},h("label",{for:"em"},"メール"),
-      h("input",{type:"email",id:"em",value:S.draft.email||"",autocomplete:"email",inputmode:"email",autocapitalize:"off",placeholder:"例：xxxx@gmail.com（追試の管理に使います）",disabled:!!S.draft.startedAt,oninput:e=>{S.draft.email=e.target.value.trim();saveDraft();$("#go").disabled=!canStart();}})),
+      h("input",{type:"email",id:"em",value:S.draft.email||"",autocomplete:"email",inputmode:"email",autocapitalize:"off",placeholder:"例：xxxx@gmail.com",disabled:!!S.draft.startedAt,oninput:e=>{S.draft.email=e.target.value.trim();saveDraft();$("#go").disabled=!canStart();}})),
     h("p",{class:"note",id:"adminNote",hidden:!isAdminName(S.draft.name),style:"max-width:640px;margin:6px auto 0;text-align:left"},"この名前は管理者として登録されています。テスト受験（順位に入らず、スプシの「管理者テスト受験」タブに保存）になります。"),
     h("div",{class:"pwbox"},h("label",{for:"pw"},"合言葉"),
       h("input",{type:"text",id:"pw",value:S.pw,autocomplete:"off",autocapitalize:"off",placeholder:"当日お伝えします",oninput:e=>{S.pw=e.target.value.trim();$("#go").disabled=!canStart()}})),
