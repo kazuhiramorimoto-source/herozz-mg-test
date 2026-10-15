@@ -54,7 +54,7 @@ table.rank tr.me td{background:var(--red-soft);font-weight:700}
 /* ============ 設定（config.json）と問題（items.enc.json＝合言葉で復号） ============ */
 let CFG = {round:"第2回",limitMin:10,closed:false,showKey:false,form:{postUrl:"",entryName:"",entryData:""}};
 let ITEMS = null;
-const BUILD = "2026-10-15 第2回 v7";
+const BUILD = "2026-10-15 第2回 v8";
 /* 管理者（config.json の adminNames）が受験した場合はテスト受験＝順位に入れず、スプシの別タブに保存される */
 const isAdminName = n => { const v=String(n||"").normalize("NFKC").toLowerCase().replace(/[\s　（）()]/g,""); return !!v && (CFG.adminNames||[]).some(a=>String(a).normalize("NFKC").toLowerCase().replace(/[\s　（）()]/g,"")===v); };
 const isTestRun = () => !!S.draft.test || isAdminName(S.draft.name);  /* 表紙に出す版（古いキャッシュを見ているか判別用） */
@@ -293,7 +293,7 @@ function rankSection(rec){
     :me?h("p",{class:"rank-me"},"あなたは",h("b",{},me[0]),`位／${rows.length}人中`)
     :h("p",{class:"note"},"集計中です。1〜2分で順位に反映されます（この画面は自動で更新されます）。");
   return h("section",{class:"sheet",id:"rankSec"},h("h2",{class:"part"},h("span",{class:"bigq"},"順位"),h("span",{class:"pts"},"（本試験）")),
-    head,rankTable(rec.test||late?null:rec.name),S.rank&&S.rank.updated?h("div",{class:"rank-upd"},"更新 "+new Date(S.rank.updated).toLocaleTimeString("ja-JP",{hour:"2-digit",minute:"2-digit"})):null);
+    head,rows.length?rankTable(rec.test||late?null:rec.name):null,S.rank&&S.rank.updated?h("div",{class:"rank-upd"},"更新 "+new Date(S.rank.updated).toLocaleTimeString("ja-JP",{hour:"2-digit",minute:"2-digit"})):null);
 }
 function renderRankOnly(v){
   v.append(h("section",{class:"sheet",id:"rankSec"},h("h2",{class:"part"},h("span",{class:"bigq"},"順位"),h("span",{class:"pts"},`（本試験・${CFG.round}）`)),
