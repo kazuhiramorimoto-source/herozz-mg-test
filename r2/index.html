@@ -1,6 +1,6 @@
 <!doctype html>
 <html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>HERO'ZZ MG定例テスト 第2回</title>
+<title>HERO'ZZ MG定例 小テスト 第2回</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=BIZ+UDPGothic:wght@400;700&family=Yomogi&family=Shippori+Mincho:wght@600;800&family=Roboto+Mono:wght@500;700&display=swap">
 <link rel="stylesheet" href="../style.css">
@@ -10,6 +10,14 @@
 .pill.kw{background:var(--warn-soft);color:var(--warn)}
 .stem .blank{display:inline-block;white-space:nowrap;min-width:3.4em;text-align:center;border:1.5px solid var(--ink);padding:0 .4em;margin:0 .2em;line-height:1.5;font-weight:700}
 .stem{line-height:2}
+.nw{display:inline-block;white-space:nowrap}
+.cover .theme{font-family:var(--serif);font-weight:700;font-size:16px;letter-spacing:.15em;margin:8px 0 2px}
+.namebox+.namebox{margin-top:0;border-top:0}
+.namebox input[type=email]{font-family:var(--mono);font-size:16px}
+.sentok{display:flex;gap:8px;align-items:center;font-weight:700;color:var(--ok);margin:10px 0 0}
+.passline{margin:10px 0 0;padding:8px 12px;border:1.5px solid var(--ink);font-weight:700;display:inline-block}
+.passline.ok{border-color:var(--ok);color:var(--ok);background:var(--ok-soft)}
+.passline.ng{border-color:var(--red);color:var(--red);background:var(--red-soft)}
 .pwbox{display:grid;grid-template-columns:auto 1fr;border:1.5px solid var(--ink);margin:10px auto 0;max-width:640px;text-align:left}
 .pwbox label{padding:10px 16px;font-weight:700;border-right:1.5px solid var(--ink);background:var(--fill);white-space:nowrap;letter-spacing:.2em}
 .pwbox input{border:0;border-radius:0;font-size:18px;padding:10px 14px;background:var(--paper);font-family:var(--mono)}
@@ -31,7 +39,7 @@
 /* ============ 設定（config.json）と問題（items.enc.json＝合言葉で復号） ============ */
 let CFG = {round:"第2回",limitMin:10,closed:false,showKey:false,form:{postUrl:"",entryName:"",entryData:""}};
 let ITEMS = null;
-const BUILD = "2026-10-15 第2回";
+const BUILD = "2026-10-15 第2回 v2";
 /* 管理者（config.json の adminNames）が受験した場合はテスト受験＝順位に入れず、スプシの別タブに保存される */
 const isAdminName = n => { const v=String(n||"").normalize("NFKC").toLowerCase().replace(/[\s　（）()]/g,""); return !!v && (CFG.adminNames||[]).some(a=>String(a).normalize("NFKC").toLowerCase().replace(/[\s　（）()]/g,"")===v); };
 const isTestRun = () => !!S.draft.test || isAdminName(S.draft.name);  /* 表紙に出す版（古いキャッシュを見ているか判別用） */
@@ -80,9 +88,16 @@ async function decryptItems(pw){
   return JSON.parse(new TextDecoder().decode(pt));
 }
 
+/* ============ メールと合格済みチェック（passed.json＝合格者のメールのハッシュ。スプシ側が更新する） ============ */
+const normEmail = e => String(e||"").normalize("NFKC").trim().toLowerCase();
+const emailOk = e => /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(normEmail(e));
+const passPts = () => { const t=ITEMS?ITEMS.reduce((a,q)=>a+q.pts,0):(CFG.totalPts||22); return Math.ceil(t*(CFG.passRatio||0.5)*10)/10; };
+async function sha256hex(s){ const b=await crypto.subtle.digest("SHA-256",new TextEncoder().encode(s)); return [...new Uint8Array(b)].map(x=>x.toString(16).padStart(2,"0")).join(""); }
+async function alreadyPassed(email){ try{ const j=await (await fetch("passed.json?v="+Date.now())).json(); const hx=await sha256hex((j.salt||"")+normEmail(email)); return (j.h||[]).includes(hx); }catch(e){ return false; } }
+
 /* ============ 状態（この端末だけ） ============ */
 const DKEY="mgtest-pages-r2";
-const S={ draft:{name:"",startedAt:null,answers:{},essays:{},test:PARAMS.get("test")==="1"}, rec:null, busy:false, err:"", pw:"" };
+const S={ draft:{name:"",email:"",startedAt:null,answers:{},essays:{},test:PARAMS.get("test")==="1"}, rec:null, busy:false, err:"", pw:"" };
 function loadDraft(){ try{ const d=JSON.parse(localStorage.getItem(DKEY)||"null"); if(d) S.draft={...S.draft,...d}; S.pw=localStorage.getItem(DKEY+"-pw")||sessionStorage.getItem(DKEY+"-pw")||""; }catch(e){} }
 function savePw(){ try{ localStorage.setItem(DKEY+"-pw",S.pw); sessionStorage.setItem(DKEY+"-pw",S.pw); }catch(e){} }
 let lsT; function saveDraft(){ clearTimeout(lsT); lsT=setTimeout(()=>{try{localStorage.setItem(DKEY,JSON.stringify(S.draft))}catch(e){}},200); }
@@ -110,7 +125,7 @@ function renderCover(v){
   const startedStr=resume?new Date(S.draft.startedAt).toLocaleTimeString("ja-JP",{hour:"2-digit",minute:"2-digit"}):"";
   v.append(h("section",{class:"sheet cover"},
     h("div",{class:"kai"},CFG.round),
-    h("h1",{},"マネージャー定例テスト"),h("div",{class:"booklet",style:"margin-top:4px"},"小テスト　言語化とプロセスエコノミー"),
+    h("h1",{},h("span",{class:"nw"},"マネージャー定例"),h("wbr"),h("span",{class:"nw"},"小テスト")),h("div",{class:"theme"},"言語化とプロセスエコノミー"),
     h("div",{class:"booklet"},"問題冊子"),
     h("table",{class:"spec"},h("tbody",{},
       h("tr",{},h("td",{},"試験時間"),h("td",{},`${CFG.limitMin}分（開始で計測）`)),
@@ -118,6 +133,7 @@ function renderCover(v){
       h("tr",{},h("td",{},"第２問"),h("td",{},"選択　3問×2点＝6点（MGとしてどう返す）")),
       h("tr",{},h("td",{},"満点"),h("td",{},"22点（記述なし・提出した瞬間に点数が確定）")),
       h("tr",{},h("td",{},"結果"),h("td",{},"提出後に自分の点数と採点が出る（順位は管理者が確認）")),
+      h("tr",{},h("td",{},"追試"),h("td",{},`${passPts()}点（満点の${Math.round((CFG.passRatio||0.5)*100)}%）以上は合格。合格したメールアドレスでは追試を受けられない`)),
       isTestRun()?h("tr",{},h("td",{},"受験の扱い"),h("td",{},"テスト受験（管理者・順位に入らない）")):null)),
     h("div",{class:"notice"},h("div",{class:"notice-h"},"注意事項"),h("ol",{class:"rules"},
       h("li",{},"講義資料・AIは見ずに解答すること。"),
@@ -131,6 +147,8 @@ function renderCover(v){
           :`試験時間が終了しています。合言葉を入れて押すと、保存されている解答でそのまま提出されます。`):null,
     h("div",{class:"namebox"},h("label",{for:"nm"},"氏名"),
       h("input",{type:"text",id:"nm",value:S.draft.name,autocomplete:"name",placeholder:"MG名（例：まめりん）",oninput:e=>{S.draft.name=e.target.value;saveDraft();$("#go").disabled=!canStart();const w=isAdminName(S.draft.name);$("#adminNote").hidden=!w;}})),
+    h("div",{class:"namebox"},h("label",{for:"em"},"メール"),
+      h("input",{type:"email",id:"em",value:S.draft.email||"",autocomplete:"email",inputmode:"email",autocapitalize:"off",placeholder:"例：xxxx@gmail.com（追試の管理に使います）",disabled:!!S.draft.startedAt,oninput:e=>{S.draft.email=e.target.value.trim();saveDraft();$("#go").disabled=!canStart();}})),
     h("p",{class:"note",id:"adminNote",hidden:!isAdminName(S.draft.name),style:"max-width:640px;margin:6px auto 0;text-align:left"},"この名前は管理者として登録されています。テスト受験（順位に入らず、スプシの「管理者テスト受験」タブに保存）になります。"),
     h("div",{class:"pwbox"},h("label",{for:"pw"},"合言葉"),
       h("input",{type:"text",id:"pw",value:S.pw,autocomplete:"off",autocapitalize:"off",placeholder:"当日お伝えします",oninput:e=>{S.pw=e.target.value.trim();$("#go").disabled=!canStart()}})),
@@ -139,12 +157,14 @@ function renderCover(v){
     h("div",{class:"note",style:"text-align:right;margin-top:14px;font-size:11px"},"版 "+BUILD)
   ));
 }
-const canStart=()=>S.draft.name.trim()&&S.pw&&!S.busy&&(!CFG.closed||!!S.draft.startedAt||!!S.pendingRec);
+const canStart=()=>S.draft.name.trim()&&(S.pendingRec||!!S.draft.startedAt||emailOk(S.draft.email))&&S.pw&&!S.busy&&(!CFG.closed||!!S.draft.startedAt||!!S.pendingRec);
 async function start(){
   S.busy=true; S.err=""; render();
   try{ ITEMS=await decryptItems(S.pw); }catch(e){ S.busy=false; S.err="合言葉が違います。"; render(); return; }
   savePw();
-  if(!S.draft.startedAt){ S.draft.startedAt=new Date().toISOString(); saveDraft(); }
+  if(!S.draft.startedAt){
+    if(!isTestRun() && await alreadyPassed(S.draft.email)){ S.busy=false; S.err=`このメールアドレスは、すでに${passPts()}点以上で合格しています。追試は受けられません。`; render(); return; }
+    S.draft.startedAt=new Date().toISOString(); saveDraft(); }
   S.busy=false; render(); scrollTo(0,0);
 }
 function isAnswered(q){ if(q.type==="mc") return S.draft.answers[q.id]!=null; if(q.type==="fill") return (S.draft.answers[q.id]||[]).filter(x=>x&&x.trim()).length===q.blanks.length; if(q.parts){ const a=(S.draft.essayParts||{})[q.id]||[]; return q.parts.every((pt,i)=>len(a[i])>=4); } return len(S.draft.essays[q.id])>=(q.type==="short"?4:10); }
@@ -195,25 +215,25 @@ function renderTest(v){ paper(v,"test"); v.append(h("section",{class:"sheet cent
 /* ============ 提出：採点 → Googleフォームへ送信（ログイン不要）→ 結果表示 ============ */
 async function sendToForm(rec){
   if(!CFG.form.postUrl) throw new Error("送信先が未設定");
-  const fd=new FormData(); fd.append(CFG.form.entryName,rec.name); fd.append(CFG.form.entryData,JSON.stringify({round:"r2",id:rec.id,name:rec.name,startedAt:rec.startedAt,submittedAt:rec.submittedAt,answers:rec.answers,essays:rec.essays,auto:rec.auto,test:rec.test}));
+  const fd=new FormData(); fd.append(CFG.form.entryName,rec.name); fd.append(CFG.form.entryData,JSON.stringify({round:"r2",id:rec.id,name:rec.name,email:rec.email,startedAt:rec.startedAt,submittedAt:rec.submittedAt,answers:rec.answers,essays:rec.essays,auto:rec.auto,test:rec.test}));
   await fetch(CFG.form.postUrl,{method:"POST",mode:"no-cors",body:fd});
 }
 async function submit(auto){
   if(S.busy||!S.draft.startedAt||!ITEMS) return;
   S.busy=true; render();
-  const rec={id:Math.random().toString(36).slice(2,12),name:S.draft.name.trim(),startedAt:S.draft.startedAt,submittedAt:new Date(Math.min(Date.now(),Date.parse(S.draft.startedAt)+CFG.limitMin*60000)).toISOString(),answers:S.draft.answers,essays:{},essayScores:{},auto:!!auto,test:isTestRun()};
+  const rec={id:Math.random().toString(36).slice(2,12),name:S.draft.name.trim(),email:normEmail(S.draft.email),startedAt:S.draft.startedAt,submittedAt:new Date(Math.min(Date.now(),Date.parse(S.draft.startedAt)+CFG.limitMin*60000)).toISOString(),answers:S.draft.answers,essays:{},essayScores:{},auto:!!auto,test:isTestRun()};
   for(const q of ITEMS) if(AI_TYPES.has(q.type)) rec.essays[q.id]=[...(S.draft.essays[q.id]||"")].slice(0,q.max).join("");
   gradeRec(rec);
   let sent=true; try{ await sendToForm(rec); }catch(e){ sent=false; }
   rec.sent=sent;
   S.rec=rec; try{ if(rec.test) localStorage.removeItem(DKEY+"-rec"); else localStorage.setItem(DKEY+"-rec",JSON.stringify(rec)); localStorage.removeItem(DKEY); }catch(e){}
-  S.draft={name:rec.name,startedAt:null,answers:{},essays:{},test:S.draft.test};
+  S.draft={name:rec.name,email:S.draft.email,startedAt:null,answers:{},essays:{},test:S.draft.test};
   S.busy=false; S.err=sent?"":"回答の送信に失敗しました（電波を確認して「もう一度送る」を押してください）。点数はこの画面で見られます。"; render(); scrollTo(0,0);
   if(location.search) history.replaceState(null,"",location.pathname);
 }
 function bar(l,v,max,c){return h("div",{class:"bar"},h("span",{},l),h("div",{class:"t"},h("i",{style:`width:${max?v/max*100:0}%;background:${c}`})),h("span",{class:"v"},`${v}/${max}`))}
 function renderResult(v,rec){
-  const sc=rec.sc, link=location.origin+location.pathname+"?r="+b64u.enc(JSON.stringify({id:rec.id,name:rec.name,startedAt:rec.startedAt,submittedAt:rec.submittedAt,answers:rec.answers,essays:rec.essays,essayScores:rec.essayScores,auto:rec.auto,test:rec.test}));
+  const sc=rec.sc;
   v.append(h("section",{class:"sheet"},
     h("div",{class:"result"},
       h("div",{class:"stamp"},h("div",{class:"center"},h("b",{},String(sc.total)),h("span",{},`点 / ${ITEMS.reduce((a,q)=>a+q.pts,0)}`))),
@@ -221,16 +241,15 @@ function renderResult(v,rec){
         h("p",{style:"margin:0;font-weight:700"},`${rec.name} さん　${rec.auto?"自動提出（時間切れ・受付終了）":"提出済み"}　${new Date(rec.submittedAt).toLocaleString("ja-JP")}`),
         rec.test?h("div",{class:"banner warn"},"テスト受験です（順位には入りません・スプシの「管理者テスト受験」タブに保存）。"):null,
         h("div",{class:"bars"},bar("一問一答",sc.ichi,secMax("ichi"),"var(--blue)"),bar("選択",sc.sel,secMax("sel"),"var(--ok)"),secMax("essay")?bar("記述",sc.essay,secMax("essay"),"var(--red)"):null),
-        rec.status==="仮"?h("p",{class:"note",style:"margin:8px 0 0"},h("span",{class:"pill kw"},"記述は仮採点"),"　記述（第３問・問1）はキーワードで仮の点を付けています。採点係が見直して確定した点数は、後日お知らせします。"):h("p",{class:"note",style:"margin:8px 0 0"},h("span",{class:"pill done"},"採点確定")),
+        
+        rec.test?null:h("div",{class:"passline "+(sc.total>=passPts()?"ok":"ng")},sc.total>=passPts()?`合格（${passPts()}点以上）`:`追試の対象です（合格は${passPts()}点以上）`),
+        rec.sent!==false?h("p",{class:"sentok"},"✓ 答案は送信されました。この画面は閉じて大丈夫です。"):null,
         h("div",{class:"noprint"},
           rec.sent===false?h("div",{class:"row",style:"margin-top:8px"},h("button",{class:"btn sm",onclick:async ev=>{const b=ev.currentTarget;b.disabled=true;b.textContent="送っています…";try{await sendToForm(rec);rec.sent=true;S.err="";render();}catch(e){b.disabled=false;b.textContent="もう一度送る";}}},"もう一度送る")):null,
-          h("p",{class:"note",style:"margin:8px 0 0"},"この答案は下のURLで後から見られます（スマホならブックマーク）。"),
-          h("div",{class:"linkbox"},link),
           h("div",{class:"row",style:"margin-top:8px"},
-            h("button",{class:"btn ghost sm",onclick:async ev=>{const b=ev.currentTarget;try{await navigator.clipboard.writeText(link);b.textContent="コピーしました"}catch(e){b.textContent="長押しでコピーしてください"}}},"URLをコピー"),
             h("button",{class:"btn ghost sm",onclick:()=>window.print()},"印刷／PDFに保存")),
           h("p",{class:"note",style:"margin:14px 0 0"},h(rec.test?"button":"a",rec.test?{class:"btn sm",type:"button",onclick:e=>{e.preventDefault(); if(!confirm("この端末に保存された答案を消して、表紙に戻ります。送信済みの点数は消えません。よろしいですか？")) return; try{ localStorage.removeItem(DKEY+"-rec"); localStorage.removeItem(DKEY); }catch(x){} S.rec=null; S.pendingRec=null; S.err=""; S.draft={name:rec.test?rec.name:"",startedAt:null,answers:{},essays:{},test:PARAMS.get("test")==="1"}; history.replaceState(null,"",location.pathname+(S.draft.test?"?test=1":"")); render(); scrollTo(0,0);}}:{href:"#",style:"color:var(--muted)",onclick:e=>{e.preventDefault(); if(!confirm("この端末に保存された答案を消して、表紙に戻ります。送信済みの点数は消えません。よろしいですか？")) return; try{ localStorage.removeItem(DKEY+"-rec"); localStorage.removeItem(DKEY); }catch(x){} S.rec=null; S.pendingRec=null; S.err=""; S.draft={name:"",startedAt:null,answers:{},essays:{},test:PARAMS.get("test")==="1"}; history.replaceState(null,"",location.pathname+(S.draft.test?"?test=1":"")); render(); scrollTo(0,0);}},rec.test?"もう一度受ける（テスト受験・表紙に戻る）":"この端末で別の人が受験する（保存した答案を消す）")))))));
-  if(!CFG.showKey) v.append(h("p",{class:"note center noprint"},"正解と解説は、管理者が公開したあとにこのURLで表示されます。"));
+  if(!CFG.showKey) v.append(h("p",{class:"note center noprint"},"下は自分の答案です（○×つき）。正解と解説は、管理者が公開したあとにこのページを開き直すと表示されます。"));
   paper(v,"result",rec);
 }
 
