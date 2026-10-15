@@ -10,6 +10,14 @@
 .pill.kw{background:var(--warn-soft);color:var(--warn)}
 .stem .blank{display:inline-block;white-space:nowrap;min-width:3.4em;text-align:center;border:1.5px solid var(--ink);padding:0 .4em;margin:0 .2em;line-height:1.5;font-weight:700}
 .stem{line-height:2}
+.rank-me{font-size:20px;font-weight:700;margin:4px 0 12px}
+.rank-me b{font-family:var(--pen);color:var(--red);font-size:34px;margin:0 4px}
+table.rank{width:100%;border-collapse:collapse;font-size:15px}
+table.rank th,table.rank td{border-bottom:1px solid var(--rule-soft);padding:7px 10px;text-align:left}
+table.rank th{border-bottom:1.5px solid var(--ink);font-family:var(--serif)}
+table.rank td.n,table.rank th.n{text-align:right;width:5em;font-family:var(--mono)}
+table.rank tr.me td{background:var(--red-soft);font-weight:700}
+.rank-upd{font-size:12px;color:var(--muted);margin-top:8px;text-align:right}
 .nw{display:inline-block;white-space:nowrap}
 .cover .theme{font-family:var(--serif);font-weight:700;font-size:16px;letter-spacing:.15em;margin:8px 0 2px}
 .formbox{max-width:640px;margin:20px auto 0;border:1.5px solid var(--ink);text-align:left}
@@ -45,7 +53,7 @@
 /* ============ 設定（config.json）と問題（items.enc.json＝合言葉で復号） ============ */
 let CFG = {round:"第2回",limitMin:10,closed:false,showKey:false,form:{postUrl:"",entryName:"",entryData:""}};
 let ITEMS = null;
-const BUILD = "2026-10-15 第2回 v4";
+const BUILD = "2026-10-15 第2回 v5";
 /* 管理者（config.json の adminNames）が受験した場合はテスト受験＝順位に入れず、スプシの別タブに保存される */
 const isAdminName = n => { const v=String(n||"").normalize("NFKC").toLowerCase().replace(/[\s　（）()]/g,""); return !!v && (CFG.adminNames||[]).some(a=>String(a).normalize("NFKC").toLowerCase().replace(/[\s　（）()]/g,"")===v); };
 const isTestRun = () => !!S.draft.test || isAdminName(S.draft.name);  /* 表紙に出す版（古いキャッシュを見ているか判別用） */
@@ -86,8 +94,9 @@ function gradeRec(rec){ // スプレッドシート側（Apps Script）と同じ
 const b64u = { enc:s=>btoa(String.fromCharCode(...new TextEncoder().encode(s))).replace(/\+/g,"-").replace(/\//g,"_").replace(/=+$/,""),
                dec:s=>new TextDecoder().decode(Uint8Array.from(atob(s.replace(/-/g,"+").replace(/_/g,"/")),c=>c.charCodeAt(0))) };
 const fromB64 = s => Uint8Array.from(atob(s),c=>c.charCodeAt(0));
-async function decryptItems(pw){
-  const blob=await (await fetch("items.enc.json?v="+Date.now())).json();
+async function decryptItems(pw){ return decryptFile("items.enc.json",pw); }
+async function decryptFile(name,pw){
+  const blob=await (await fetch(name+"?v="+Date.now())).json();
   const km=await crypto.subtle.importKey("raw",new TextEncoder().encode(pw),"PBKDF2",false,["deriveKey"]);
   const key=await crypto.subtle.deriveKey({name:"PBKDF2",salt:fromB64(blob.s),iterations:100000,hash:"SHA-256"},km,{name:"AES-GCM",length:256},false,["decrypt"]);
   const pt=await crypto.subtle.decrypt({name:"AES-GCM",iv:fromB64(blob.iv)},key,fromB64(blob.d));
@@ -121,6 +130,7 @@ function render(){
   $("#kai").textContent=CFG.round; $("#lim").textContent=CFG.limitMin;
   const b=$("#banner"); b.replaceChildren(); if(S.err) b.append(h("div",{class:"banner err"},S.err));
   const v=$("#view"); v.replaceChildren(); $("#progWrap").hidden=true;
+  if(S.view==="rank"&&ITEMS) return renderRankOnly(v);
   if(S.rec) return renderResult(v,S.rec);
   if(S.draft.startedAt&&ITEMS) return renderTest(v);
   renderCover(v);
@@ -160,6 +170,7 @@ function renderCover(v){
         h("input",{type:"text",id:"pw",value:S.pw,autocomplete:"off",autocapitalize:"off",placeholder:"当日お伝えします",oninput:e=>{S.pw=e.target.value.trim();$("#go").disabled=!canStart()}}))),
     h("p",{class:"note",id:"adminNote",hidden:!isAdminName(S.draft.name),style:"max-width:640px;margin:6px auto 0;text-align:left"},"この名前は管理者として登録されています。テスト受験（順位に入らず、スプシの「管理者テスト受験」タブに保存）になります。"),
     h("div",{class:"center",style:"margin-top:20px"},
+      h("button",{class:"btn ghost",id:"seeRank",style:"margin-right:10px",onclick:openRank},"順位を見る"),
       h("button",{class:"btn red",id:"go",disabled:!canStart(),onclick:start},S.busy?"問題を開いています…":resume?(ms>0?"続きから再開する":"保存した解答で提出する"):`解答を始める（${CFG.limitMin}分）`)),
     h("div",{class:"note",style:"text-align:right;margin-top:14px;font-size:11px"},"版 "+BUILD)
   ));
@@ -235,6 +246,7 @@ async function submit(auto){
   rec.sent=sent;
   S.rec=rec; try{ if(rec.test) localStorage.removeItem(DKEY+"-rec"); else localStorage.setItem(DKEY+"-rec",JSON.stringify(rec)); localStorage.removeItem(DKEY); }catch(e){}
   S.draft={name:rec.name,email:S.draft.email,startedAt:null,answers:{},essays:{},test:S.draft.test};
+  await loadRank();
   S.busy=false; S.err=sent?"":"回答の送信に失敗しました（電波を確認して「もう一度送る」を押してください）。点数はこの画面で見られます。"; render(); scrollTo(0,0);
   if(location.search) history.replaceState(null,"",location.pathname);
 }
@@ -256,9 +268,42 @@ function renderResult(v,rec){
           h("div",{class:"row",style:"margin-top:8px"},
             h("button",{class:"btn ghost sm",onclick:()=>window.print()},"印刷／PDFに保存")),
           h("p",{class:"note",style:"margin:14px 0 0"},h(rec.test?"button":"a",rec.test?{class:"btn sm",type:"button",onclick:e=>{e.preventDefault(); if(!confirm("この端末に保存された答案を消して、表紙に戻ります。送信済みの点数は消えません。よろしいですか？")) return; try{ localStorage.removeItem(DKEY+"-rec"); localStorage.removeItem(DKEY); }catch(x){} S.rec=null; S.pendingRec=null; S.err=""; S.draft={name:rec.test?rec.name:"",startedAt:null,answers:{},essays:{},test:PARAMS.get("test")==="1"}; history.replaceState(null,"",location.pathname+(S.draft.test?"?test=1":"")); render(); scrollTo(0,0);}}:{href:"#",style:"color:var(--muted)",onclick:e=>{e.preventDefault(); if(!confirm("この端末に保存された答案を消して、表紙に戻ります。送信済みの点数は消えません。よろしいですか？")) return; try{ localStorage.removeItem(DKEY+"-rec"); localStorage.removeItem(DKEY); }catch(x){} S.rec=null; S.pendingRec=null; S.err=""; S.draft={name:"",startedAt:null,answers:{},essays:{},test:PARAMS.get("test")==="1"}; history.replaceState(null,"",location.pathname+(S.draft.test?"?test=1":"")); render(); scrollTo(0,0);}},rec.test?"もう一度受ける（テスト受験・表紙に戻る）":"この端末で別の人が受験する（保存した答案を消す）")))))));
+  v.append(rankSection(rec));
   if(!CFG.showKey) v.append(h("p",{class:"note center noprint"},"下は自分の答案です（○×つき）。正解と解説は、管理者が公開したあとにこのページを開き直すと表示されます。"));
   paper(v,"result",rec);
 }
+
+/* ============ 順位（rank.enc.json＝集計シートから1分ごとに自動更新・合言葉で復号） ============ */
+async function loadRank(){ if(!S.pw) return; try{ S.rank=await decryptFile("rank.enc.json",S.pw); }catch(e){} }
+const sameName=(a,b)=>norm(a)===norm(b);
+function rankTable(meName){
+  const rows=(S.rank&&S.rank.rows)||[];
+  if(!rows.length) return h("p",{class:"note"},"まだ順位はありません（提出から1〜2分で反映されます）。");
+  return h("table",{class:"rank"},h("thead",{},h("tr",{},h("th",{class:"n"},"順位"),h("th",{},"氏名"),h("th",{class:"n"},"点数"))),
+    h("tbody",{},rows.map(r=>h("tr",{class:meName&&sameName(r[1],meName)?"me":null},h("td",{class:"n"},r[0]+"位"),h("td",{},r[1]),h("td",{class:"n"},r[2])))));
+}
+function rankSection(rec){
+  const rows=(S.rank&&S.rank.rows)||[], late=CFG.cutoff&&Date.parse(rec.startedAt)>=Date.parse(CFG.cutoff);
+  const me=rows.find(r=>sameName(r[1],rec.name));
+  const head=rec.test?h("p",{class:"note"},"テスト受験（管理者）は順位に入りません。")
+    :late?h("p",{class:"note"},"追試（後日受験）のため、順位には入りません。")
+    :me?h("p",{class:"rank-me"},"あなたは",h("b",{},me[0]),`位／${rows.length}人中`)
+    :h("p",{class:"note"},"集計中です。1〜2分で順位に反映されます（この画面は自動で更新されます）。");
+  return h("section",{class:"sheet",id:"rankSec"},h("h2",{class:"part"},h("span",{class:"bigq"},"順位"),h("span",{class:"pts"},"（本試験）")),
+    head,rankTable(rec.test||late?null:rec.name),S.rank&&S.rank.updated?h("div",{class:"rank-upd"},"更新 "+new Date(S.rank.updated).toLocaleTimeString("ja-JP",{hour:"2-digit",minute:"2-digit"})):null);
+}
+function renderRankOnly(v){
+  v.append(h("section",{class:"sheet",id:"rankSec"},h("h2",{class:"part"},h("span",{class:"bigq"},"順位"),h("span",{class:"pts"},`（本試験・${CFG.round}）`)),
+    rankTable(null),S.rank&&S.rank.updated?h("div",{class:"rank-upd"},"更新 "+new Date(S.rank.updated).toLocaleTimeString("ja-JP",{hour:"2-digit",minute:"2-digit"})+"（自動で更新されます）"):null,
+    h("div",{class:"center noprint",style:"margin-top:16px"},h("button",{class:"btn ghost sm",onclick:()=>{S.view=null;render();scrollTo(0,0);}},"表紙に戻る"))));
+}
+async function openRank(){
+  if(!S.pw){ S.err="順位を見るには、合言葉を入れてください。"; render(); return; }
+  try{ if(!ITEMS) ITEMS=await decryptItems(S.pw); }catch(e){ S.err="合言葉が違います。"; render(); return; }
+  savePw(); S.err=""; await loadRank(); S.view="rank"; render(); scrollTo(0,0);
+}
+setInterval(async()=>{ if(!(S.rec||S.view==="rank")||!S.pw) return; const before=JSON.stringify(S.rank); await loadRank();
+  if(JSON.stringify(S.rank)!==before){ const old=$("#rankSec"); if(old) old.replaceWith(S.view==="rank"&&!S.rec?(()=>{const d=document.createElement("div");renderRankOnly(d);return d.firstChild;})():rankSection(S.rec)); } },30000);
 
 /* ============ 起動 ============ */
 (async()=>{
@@ -279,9 +324,9 @@ function renderResult(v,rec){
   else if(!S.draft.startedAt){ try{ const rec=JSON.parse(localStorage.getItem(DKEY+"-rec")||"null");
       if(rec&&rec.submittedAt&&rec.test){ try{ localStorage.removeItem(DKEY+"-rec"); }catch(e){} }
       else if(rec&&rec.submittedAt){ if(!ITEMS&&S.pw){ try{ ITEMS=await decryptItems(S.pw); }catch(e){} }
-        if(ITEMS){ S.rec=gradeRec(rec); render(); } else { S.err="この端末で提出済みの答案があります。表紙で合言葉を入れて「解答を始める」を押すと、その答案が表示されます。"; S.pendingRec=rec; render(); } } }catch(e){} }
+        if(ITEMS){ S.rec=gradeRec(rec); await loadRank(); render(); } else { S.err="この端末で提出済みの答案があります。表紙で合言葉を入れて「解答を始める」を押すと、その答案が表示されます。"; S.pendingRec=rec; render(); } } }catch(e){} }
 })();
 // 合言葉入力後に答案を表示（?r= で開いたとき）
-const _start=start; start=async function(){ if(S.pendingRec){ S.busy=true; render(); try{ ITEMS=await decryptItems(S.pw); savePw(); S.rec=gradeRec(S.pendingRec); S.pendingRec=null; S.err=""; }catch(e){ S.err="合言葉が違います。"; } S.busy=false; render(); return; } return _start(); };
+const _start=start; start=async function(){ if(S.pendingRec){ S.busy=true; render(); try{ ITEMS=await decryptItems(S.pw); savePw(); S.rec=gradeRec(S.pendingRec); S.pendingRec=null; S.err=""; await loadRank(); }catch(e){ S.err="合言葉が違います。"; } S.busy=false; render(); return; } return _start(); };
 </script>
 </body></html>
