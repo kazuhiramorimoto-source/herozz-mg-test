@@ -42,8 +42,8 @@ table.rank tr.me td{background:var(--red-soft);font-weight:700}
 <div class="wrap">
   <div class="bar-top">
     <div class="strip">
-      <div class="meta"><span><b id="kai"></b></span><span>試験時間 <b id="lim">10</b>分</span><button class="btn ghost sm noprint" id="homeBtn" hidden>ホームに戻る</button></div>
-      <div class="timer" id="timer"><small>残り</small>10:00</div>
+      <div class="meta"><span><b id="kai"></b></span><span>試験時間 <b id="lim">12</b>分</span><button class="btn ghost sm noprint" id="homeBtn" hidden>ホームに戻る</button></div>
+      <div class="timer" id="timer"><small>残り</small>12:00</div>
     </div>
     <div class="progress" id="progWrap" hidden><i id="progBar"></i></div>
   </div>
@@ -53,9 +53,9 @@ table.rank tr.me td{background:var(--red-soft);font-weight:700}
 
 <script>
 /* ============ 設定（config.json）と問題（items.enc.json＝合言葉で復号） ============ */
-let CFG = {round:"第2回",limitMin:10,closed:false,showKey:false,form:{postUrl:"",entryName:"",entryData:""}};
+let CFG = {round:"第2回",limitMin:12,closed:false,showKey:false,form:{postUrl:"",entryName:"",entryData:""}};
 let ITEMS = null;
-const BUILD = "2026-10-15 第2回 v12";
+const BUILD = "2026-10-15 第2回 v13";
 /* 管理者（config.json の adminNames）が受験した場合はテスト受験＝順位に入れず、スプシの別タブに保存される */
 const isAdminName = n => { const v=String(n||"").normalize("NFKC").toLowerCase().replace(/[\s　（）()]/g,""); return !!v && (CFG.adminNames||[]).some(a=>String(a).normalize("NFKC").toLowerCase().replace(/[\s　（）()]/g,"")===v); };
 /* 管理者メール（config.json の adminEmails）は何回でも受けられる＝テスト受験（順位に入らない・合格済みチェックもしない） */
