@@ -55,7 +55,7 @@ table.rank tr.me td{background:var(--red-soft);font-weight:700}
 /* ============ 設定（config.json）と問題（items.enc.json＝合言葉で復号） ============ */
 let CFG = {round:"第2回",limitMin:12,closed:false,showKey:false,form:{postUrl:"",entryName:"",entryData:""}};
 let ITEMS = null;
-const BUILD = "2026-10-21 公開講義 v1";
+const BUILD = "2026-10-21 公開講義 v2（10問・100点）";
 /* 管理者（config.json の adminNames）が受験した場合はテスト受験＝順位に入れず、スプシの別タブに保存される */
 const isAdminName = n => { const v=String(n||"").normalize("NFKC").toLowerCase().replace(/[\s　（）()]/g,""); return !!v && (CFG.adminNames||[]).some(a=>String(a).normalize("NFKC").toLowerCase().replace(/[\s　（）()]/g,"")===v); };
 /* 管理者メール（config.json の adminEmails）は何回でも受けられる＝テスト受験（順位に入らない・合格済みチェックもしない） */
@@ -115,7 +115,7 @@ async function sha256hex(s){ const b=await crypto.subtle.digest("SHA-256",new Te
 async function alreadyPassed(email){ try{ const j=await (await fetch("passed.json?v="+Date.now())).json(); const hx=await sha256hex((j.salt||"")+normEmail(email)); return (j.h||[]).includes(hx); }catch(e){ return false; } }
 
 /* ============ 状態（この端末だけ） ============ */
-const DKEY="herozz-pubtest-c1";
+const DKEY="herozz-pubtest-c1v2";
 const S={ draft:{name:"",email:"",startedAt:null,answers:{},essays:{},test:PARAMS.get("test")==="1"}, rec:null, busy:false, err:"", pw:"" };
 function loadDraft(){ try{ const d=JSON.parse(localStorage.getItem(DKEY)||"null"); if(d) S.draft={...S.draft,...d}; S.pw=localStorage.getItem(DKEY+"-pw")||sessionStorage.getItem(DKEY+"-pw")||""; }catch(e){} }
 function savePw(){ try{ localStorage.setItem(DKEY+"-pw",S.pw); sessionStorage.setItem(DKEY+"-pw",S.pw); }catch(e){} }
@@ -151,9 +151,9 @@ function renderCover(v){
     h("div",{class:"booklet"},"問題冊子"),
     h("table",{class:"spec"},h("tbody",{},
       h("tr",{},h("td",{},"試験時間"),h("td",{},`${CFG.limitMin}分（開始で計測）`)),
-      h("tr",{},h("td",{},"第１問"),h("td",{},"選択　18問×1点＝18点")),
-      h("tr",{},h("td",{},"第２問"),h("td",{},"記述　1問＝2点")),
-      h("tr",{},h("td",{},"満点"),h("td",{},"20点")),
+      h("tr",{},h("td",{},"第１問"),h("td",{},"選択　9問×10点＝90点")),
+      h("tr",{},h("td",{},"第２問"),h("td",{},"記述　1問×10点＝10点")),
+      h("tr",{},h("td",{},"満点"),h("td",{},`${ITEMS?ITEMS.reduce((a,q)=>a+q.pts,0):(CFG.totalPts||100)}点`)),
       h("tr",{},h("td",{},"結果"),h("td",{},"提出後すぐに、自分の点数と○×が出る")),
       isTestRun()?h("tr",{},h("td",{},"受験の扱い"),h("td",{},"テスト受験（管理者・順位に入らない）")):null)),
     h("div",{class:"notice"},h("div",{class:"notice-h"},"注意事項"),h("ol",{class:"rules"},
