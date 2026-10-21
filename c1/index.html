@@ -1,6 +1,6 @@
 <!doctype html>
 <html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>HERO'ZZ 公開講義 小テスト コンセプト設計</title>
+<title>HERO'ZZ 第1回 公開講義理解度テスト コンセプト設計</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=BIZ+UDPGothic:wght@400;700&family=Yomogi&family=Shippori+Mincho:wght@600;800&family=Roboto+Mono:wght@500;700&display=swap">
 <link rel="stylesheet" href="../style.css">
@@ -53,9 +53,9 @@ table.rank tr.me td{background:var(--red-soft);font-weight:700}
 
 <script>
 /* ============ 設定（config.json）と問題（items.enc.json＝合言葉で復号） ============ */
-let CFG = {round:"第2回",limitMin:12,closed:false,showKey:false,form:{postUrl:"",entryName:"",entryData:""}};
+let CFG = {round:"",limitMin:10,closed:false,showKey:false,form:{postUrl:"",entryName:"",entryData:""}};
 let ITEMS = null;
-const BUILD = "2026-10-21 公開講義 v2（10問・100点）";
+const BUILD = "2026-10-21 公開講義 v2.1（10問・100点）";
 /* 管理者（config.json の adminNames）が受験した場合はテスト受験＝順位に入れず、スプシの別タブに保存される */
 const isAdminName = n => { const v=String(n||"").normalize("NFKC").toLowerCase().replace(/[\s　（）()]/g,""); return !!v && (CFG.adminNames||[]).some(a=>String(a).normalize("NFKC").toLowerCase().replace(/[\s　（）()]/g,"")===v); };
 /* 管理者メール（config.json の adminEmails）は何回でも受けられる＝テスト受験（順位に入らない・合格済みチェックもしない） */
@@ -147,7 +147,7 @@ function renderCover(v){
   const startedStr=resume?new Date(S.draft.startedAt).toLocaleTimeString("ja-JP",{hour:"2-digit",minute:"2-digit"}):"";
   v.append(h("section",{class:"sheet cover"},
     h("div",{class:"kai"},CFG.round),
-    h("h1",{},h("span",{class:"nw"},"公開講義"),h("wbr"),h("span",{class:"nw"},"小テスト")),h("div",{class:"theme"},"コンセプト設計"),
+    h("h1",{},h("span",{class:"nw"},"第1回"),h("wbr"),h("span",{class:"nw"},"公開講義"),h("wbr"),h("span",{class:"nw"},"理解度テスト")),h("div",{class:"theme"},"コンセプト設計"),
     h("div",{class:"booklet"},"問題冊子"),
     h("table",{class:"spec"},h("tbody",{},
       h("tr",{},h("td",{},"試験時間"),h("td",{},`${CFG.limitMin}分（開始で計測）`)),
