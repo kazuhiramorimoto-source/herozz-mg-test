@@ -23,9 +23,11 @@ table.rank tr.me td{background:var(--red-soft);font-weight:700}
 .nw{display:inline-block;white-space:nowrap}
 .cover .theme{font-family:var(--serif);font-weight:700;font-size:16px;letter-spacing:.15em;margin:8px 0 2px}
 .formbox{max-width:640px;margin:20px auto 0;border:1.5px solid var(--ink);text-align:left}
-.frow{display:grid;grid-template-columns:7em minmax(0,1fr)}
+.frow{display:grid;grid-template-columns:9.5em minmax(0,1fr)}
 .frow+.frow{border-top:1px solid var(--ink)}
 .frow label{display:flex;align-items:center;justify-content:center;padding:10px 8px;font-weight:700;font-family:var(--serif);background:var(--fill);border-right:1.5px solid var(--ink);white-space:nowrap;letter-spacing:.2em}
+.frow label[for=mg]{letter-spacing:.02em}
+@media (max-width:480px){.frow{grid-template-columns:7.4em minmax(0,1fr)}.frow label{font-size:13px;letter-spacing:.08em;padding:10px 4px}.frow label[for=mg]{letter-spacing:0}.frow input{padding:10px 10px}}
 .frow input{width:100%;min-width:0;border:0;border-radius:0;font-size:17px;padding:10px 14px;background:var(--paper);font-family:var(--sans)}
 .frow input#em,.frow input#pw{font-family:var(--mono);font-size:16px}
 .cover table.spec{width:100%;max-width:640px}
@@ -55,7 +57,7 @@ table.rank tr.me td{background:var(--red-soft);font-weight:700}
 /* ============ 設定（config.json）と問題（items.enc.json＝合言葉で復号） ============ */
 let CFG = {round:"",limitMin:10,closed:false,showKey:false,form:{postUrl:"",entryName:"",entryData:""}};
 let ITEMS = null;
-const BUILD = "2026-10-21 公開講義 v2.1（10問・100点）";
+const BUILD = "2026-10-21 公開講義 v2.2（氏名・マネージャー名・合言葉）";
 /* 管理者（config.json の adminNames）が受験した場合はテスト受験＝順位に入れず、スプシの別タブに保存される */
 const isAdminName = n => { const v=String(n||"").normalize("NFKC").toLowerCase().replace(/[\s　（）()]/g,""); return !!v && (CFG.adminNames||[]).some(a=>String(a).normalize("NFKC").toLowerCase().replace(/[\s　（）()]/g,"")===v); };
 /* 管理者メール（config.json の adminEmails）は何回でも受けられる＝テスト受験（順位に入らない・合格済みチェックもしない） */
@@ -116,7 +118,7 @@ async function alreadyPassed(email){ try{ const j=await (await fetch("passed.jso
 
 /* ============ 状態（この端末だけ） ============ */
 const DKEY="herozz-pubtest-c1v2";
-const S={ draft:{name:"",email:"",startedAt:null,answers:{},essays:{},test:PARAMS.get("test")==="1"}, rec:null, busy:false, err:"", pw:"" };
+const S={ draft:{name:"",mgr:"",startedAt:null,answers:{},essays:{},test:PARAMS.get("test")==="1"}, rec:null, busy:false, err:"", pw:"" };
 function loadDraft(){ try{ const d=JSON.parse(localStorage.getItem(DKEY)||"null"); if(d) S.draft={...S.draft,...d}; S.pw=localStorage.getItem(DKEY+"-pw")||sessionStorage.getItem(DKEY+"-pw")||""; }catch(e){} }
 function savePw(){ try{ localStorage.setItem(DKEY+"-pw",S.pw); sessionStorage.setItem(DKEY+"-pw",S.pw); }catch(e){} }
 let lsT; function saveDraft(){ clearTimeout(lsT); lsT=setTimeout(()=>{try{localStorage.setItem(DKEY,JSON.stringify(S.draft))}catch(e){}},200); }
@@ -170,8 +172,8 @@ function renderCover(v){
     h("div",{class:"formbox"},
       h("div",{class:"frow"},h("label",{for:"nm"},"氏名"),
         h("input",{type:"text",id:"nm",value:S.draft.name,autocomplete:"name",placeholder:"お名前（例：山田花子）",oninput:e=>{S.draft.name=e.target.value;saveDraft();$("#go").disabled=!canStart();$("#adminNote").hidden=!isTestRun();}})),
-      h("div",{class:"frow"},h("label",{for:"em"},"メール"),
-        h("input",{type:"email",id:"em",value:S.draft.email||"",autocomplete:"email",inputmode:"email",autocapitalize:"off",placeholder:"例：xxxx@gmail.com",disabled:!!S.draft.startedAt,oninput:e=>{S.draft.email=e.target.value.trim();saveDraft();$("#go").disabled=!canStart();$("#adminNote").hidden=!isTestRun();}})),
+      h("div",{class:"frow"},h("label",{for:"mg"},"マネージャー名"),
+        h("input",{type:"text",id:"mg",value:S.draft.mgr||"",autocomplete:"off",placeholder:"担当マネージャー",disabled:!!S.draft.startedAt,oninput:e=>{S.draft.mgr=e.target.value;saveDraft();$("#go").disabled=!canStart();}})),
       h("div",{class:"frow"},h("label",{for:"pw"},"合言葉"),
         h("input",{type:"text",id:"pw",value:S.pw,autocomplete:"off",autocapitalize:"off",placeholder:"当日お伝えします",oninput:e=>{S.pw=e.target.value.trim();$("#go").disabled=!canStart()}}))),
     h("p",{class:"note",id:"adminNote",hidden:!isTestRun(),style:"max-width:640px;margin:6px auto 0;text-align:left"},"管理者として登録されています。テスト受験（何回でも受けられる・順位に入らない）になります。"),
@@ -180,7 +182,7 @@ function renderCover(v){
     h("div",{class:"note",style:"text-align:right;margin-top:14px;font-size:11px"},"版 "+BUILD)
   ));
 }
-const canStart=()=>S.draft.name.trim()&&(S.pendingRec||!!S.draft.startedAt||emailOk(S.draft.email))&&S.pw&&!S.busy&&(!CFG.closed||!!S.draft.startedAt||!!S.pendingRec);
+const canStart=()=>S.draft.name.trim()&&(S.pendingRec||!!S.draft.startedAt||(S.draft.mgr||"").trim())&&S.pw&&!S.busy&&(!CFG.closed||!!S.draft.startedAt||!!S.pendingRec);
 async function start(){
   S.busy=true; S.err=""; render();
   try{ ITEMS=await decryptItems(S.pw); }catch(e){ S.busy=false; S.err="合言葉が違います。"; render(); return; }
@@ -238,19 +240,19 @@ function renderTest(v){ paper(v,"test"); v.append(h("section",{class:"sheet cent
 /* ============ 提出：採点 → Googleフォームへ送信（ログイン不要）→ 結果表示 ============ */
 async function sendToForm(rec){
   if(!CFG.form.postUrl) throw new Error("送信先が未設定");
-  const fd=new FormData(); fd.append(CFG.form.entryName,rec.name); fd.append(CFG.form.entryData,JSON.stringify({round:"c1",id:rec.id,name:rec.name,email:rec.email,startedAt:rec.startedAt,submittedAt:rec.submittedAt,answers:rec.answers,essays:rec.essays,auto:rec.auto,test:rec.test}));
+  const fd=new FormData(); fd.append(CFG.form.entryName,rec.name); fd.append(CFG.form.entryData,JSON.stringify({round:"c1",id:rec.id,name:rec.name,mgr:rec.mgr||"",email:"",startedAt:rec.startedAt,submittedAt:rec.submittedAt,answers:rec.answers,essays:rec.essays,auto:rec.auto,test:rec.test}));
   await fetch(CFG.form.postUrl,{method:"POST",mode:"no-cors",body:fd});
 }
 async function submit(auto){
   if(S.busy||!S.draft.startedAt||!ITEMS) return;
   S.busy=true; render();
-  const rec={id:Math.random().toString(36).slice(2,12),name:S.draft.name.trim(),email:normEmail(S.draft.email),startedAt:S.draft.startedAt,submittedAt:new Date(Math.min(Date.now(),Date.parse(S.draft.startedAt)+CFG.limitMin*60000)).toISOString(),answers:S.draft.answers,essays:{},essayScores:{},auto:!!auto,test:isTestRun()};
+  const rec={id:Math.random().toString(36).slice(2,12),name:S.draft.name.trim(),mgr:(S.draft.mgr||"").trim(),email:"",startedAt:S.draft.startedAt,submittedAt:new Date(Math.min(Date.now(),Date.parse(S.draft.startedAt)+CFG.limitMin*60000)).toISOString(),answers:S.draft.answers,essays:{},essayScores:{},auto:!!auto,test:isTestRun()};
   for(const q of ITEMS) if(AI_TYPES.has(q.type)) rec.essays[q.id]=[...(S.draft.essays[q.id]||"")].slice(0,q.max).join("");
   gradeRec(rec);
   let sent=true; try{ await sendToForm(rec); }catch(e){ sent=false; }
   rec.sent=sent;
   S.rec=rec; try{ if(rec.test) localStorage.removeItem(DKEY+"-rec"); else localStorage.setItem(DKEY+"-rec",JSON.stringify(rec)); localStorage.removeItem(DKEY); }catch(e){}
-  S.draft={name:rec.name,email:S.draft.email,startedAt:null,answers:{},essays:{},test:S.draft.test};
+  S.draft={name:rec.name,mgr:S.draft.mgr,startedAt:null,answers:{},essays:{},test:S.draft.test};
   await loadRank();
   S.busy=false; S.err=sent?"":"回答の送信に失敗しました（電波を確認して「もう一度送る」を押してください）。点数はこの画面で見られます。"; render(); scrollTo(0,0);
   if(location.search) history.replaceState(null,"",location.pathname);
@@ -336,7 +338,7 @@ setInterval(async()=>{ if(!(S.rec||S.view==="rank")||!S.pw) return; const before
 function goHome(){
   if(S.draft.startedAt&&!S.rec&&!confirm("ホームに戻ります。解答は消え、タイマーは"+CFG.limitMin+"分に戻ります。よろしいですか？")) return;
   try{ localStorage.removeItem(DKEY); if(!S.rec||S.rec.test) localStorage.removeItem(DKEY+"-rec"); }catch(e){}
-  S.draft={name:S.draft.name||(S.rec&&S.rec.name)||"",email:S.draft.email||"",startedAt:null,answers:{},essays:{},test:PARAMS.get("test")==="1"};
+  S.draft={name:S.draft.name||(S.rec&&S.rec.name)||"",mgr:S.draft.mgr||"",startedAt:null,answers:{},essays:{},test:PARAMS.get("test")==="1"};
   S.rec=null; S.pendingRec=null; S.view=null; S.err=""; history.replaceState(null,"",location.pathname); render(); scrollTo(0,0);
 }
 
