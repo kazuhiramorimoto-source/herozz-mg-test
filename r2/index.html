@@ -19,6 +19,10 @@ table.rank th,table.rank td{border-bottom:1px solid var(--rule-soft);padding:7px
 table.rank th{border-bottom:1.5px solid var(--ink);font-family:var(--serif)}
 table.rank td.n,table.rank th.n{text-align:right;width:5em;font-family:var(--mono)}
 table.rank tr.me td{background:var(--red-soft);font-weight:700}
+table.rank td.mv{white-space:nowrap;font-weight:700;color:var(--muted)}
+table.rank td.mv.up{color:#2E7D32}
+table.rank td.mv.down{color:var(--red)}
+@media (max-width:520px){table.rank{font-size:13px}table.rank th,table.rank td{padding:6px 5px}table.rank td.n,table.rank th.n{width:auto}}
 .rank-upd{font-size:12px;color:var(--muted);margin-top:8px;text-align:right}
 .nw{display:inline-block;white-space:nowrap}
 .cover .theme{font-family:var(--serif);font-weight:700;font-size:16px;letter-spacing:.15em;margin:8px 0 2px}
@@ -55,7 +59,7 @@ table.rank tr.me td{background:var(--red-soft);font-weight:700}
 /* ============ 設定（config.json）と問題（items.enc.json＝合言葉で復号） ============ */
 let CFG = {round:"第2回",limitMin:12,closed:false,showKey:false,form:{postUrl:"",entryName:"",entryData:""}};
 let ITEMS = null;
-const BUILD = "2026-10-19 第2回 v17";
+const BUILD = "1022-2040";
 /* 管理者（config.json の adminNames）が受験した場合はテスト受験＝順位に入れず、スプシの別タブに保存される */
 const isAdminName = n => { const v=String(n||"").normalize("NFKC").toLowerCase().replace(/[\s　（）()]/g,""); return !!v && (CFG.adminNames||[]).some(a=>String(a).normalize("NFKC").toLowerCase().replace(/[\s　（）()]/g,"")===v); };
 /* 管理者メール（config.json の adminEmails）は何回でも受けられる＝テスト受験（順位に入らない・合格済みチェックもしない） */
@@ -311,8 +315,11 @@ const sameName=(a,b)=>norm(a)===norm(b);
 function rankTable(meName){
   const rows=(S.rank&&S.rank.rows)||[];
   if(!rows.length) return h("p",{class:"note"},"まだ順位はありません（提出から1〜2分で反映されます）。");
-  return h("table",{class:"rank"},h("thead",{},h("tr",{},h("th",{class:"n"},"順位"),h("th",{},"氏名"),h("th",{class:"n"},"点数"))),
-    h("tbody",{},rows.map(r=>h("tr",{class:meName&&sameName(r[1],meName)?"me":null},h("td",{class:"n"},r[0]+"位"),h("td",{},r[1]),h("td",{class:"n"},r[2])))));
+  const mv=rows.some(r=>r.length>=5), pl=(S.rank&&S.rank.prevLabel)||"前回";   // 前回の順位と推移（↑上がった／↓下がった）
+  const mvCls=m=>/^↑/.test(m)?"mv up":/^↓/.test(m)?"mv down":"mv";
+  return h("table",{class:"rank"},h("thead",{},h("tr",{},h("th",{class:"n"},"順位"),h("th",{},"氏名"),h("th",{class:"n"},"点数"),mv?h("th",{class:"n"},pl):null,mv?h("th",{class:"n"},"推移"):null)),
+    h("tbody",{},rows.map(r=>h("tr",{class:meName&&sameName(r[1],meName)?"me":null},h("td",{class:"n"},r[0]+"位"),h("td",{},r[1]),h("td",{class:"n"},r[2]),
+      mv?h("td",{class:"n"},r[3]||"―"):null,mv?h("td",{class:"n "+mvCls(r[4]||"")},(r[4]||"").replace("第1回は追試","―").replace("初受験","初")):null))));
 }
 function rankSection(rec){
   const rows=(S.rank&&S.rank.rows)||[], late=CFG.cutoff&&Date.parse(rec.startedAt)>=Date.parse(CFG.cutoff);
