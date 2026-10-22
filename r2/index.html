@@ -86,6 +86,7 @@ function fillRight(q,arr){ arr=arr||[]; if(q.anyOrder){ const used=new Set(); fo
 const fillOk = (q,arr) => fillRight(q,arr)===q.blanks.length;
 function kwItems(q,text){ const v=norm(text); return q.rubric.map(x=>x.kw&&v&&x.kw.every(g=>g.some(w=>v.includes(norm(w))))?x.p:0); }
 function gradeRec(rec){ // スプレッドシート側（Apps Script）と同じ採点
+  if(rec.fixedSc){ rec.sc=Object.assign({},rec.fixedSc,{pending:false}); rec.essayScores=rec.essayScores||{}; rec.status="確定"; return rec; } // 満点変更前の答案＝換算済みの点で固定
   const sc={ichi:0,sel:0,essay:0,total:0,pending:false}, scores=rec.essayScores||{};
   for(const q of ITEMS){ let pts=0;
     if(q.type==="mc") pts=(rec.answers||{})[q.id]===0?q.pts:0;
