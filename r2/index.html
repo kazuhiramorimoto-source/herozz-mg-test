@@ -89,7 +89,7 @@ function gradeRec(rec){ // スプレッドシート側（Apps Script）と同じ
   const sc={ichi:0,sel:0,essay:0,total:0,pending:false}, scores=rec.essayScores||{};
   for(const q of ITEMS){ let pts=0;
     if(q.type==="mc") pts=(rec.answers||{})[q.id]===0?q.pts:0;
-    else if(q.type==="fill") pts=q.pts*fillRight(q,(rec.answers||{})[q.id])/q.blanks.length;
+    else if(q.type==="fill"){ const a=(rec.answers||{})[q.id]; pts=(typeof a==="number")?(a===q.legacyMc?q.pts:0):q.pts*fillRight(q,a)/q.blanks.length; }
     else { let s=scores[q.id]; if(!s){ const k=kwItems(q,(rec.essays||{})[q.id]||""); s=scores[q.id]={items:k,score:k.reduce((a,b)=>a+b,0),comment:"",by:"kw"}; } if(s.by==="kw") sc.pending=true; pts=s.score/rMax(q)*q.pts; }
     sc[q.s]+=pts; }
   for(const k of ["ichi","sel","essay"]) sc[k]=Math.round(sc[k]*10)/10;
@@ -192,7 +192,7 @@ async function start(){
     S.draft.startedAt=new Date().toISOString(); saveDraft(); }
   S.busy=false; render(); scrollTo(0,0);
 }
-function isAnswered(q){ if(q.type==="mc") return S.draft.answers[q.id]!=null; if(q.type==="fill") return (S.draft.answers[q.id]||[]).filter(x=>x&&x.trim()).length===q.blanks.length; if(q.parts){ const a=(S.draft.essayParts||{})[q.id]||[]; return q.parts.every((pt,i)=>len(a[i])>=4); } return len(S.draft.essays[q.id])>=(q.type==="short"?4:10); }
+function isAnswered(q){ if(q.type==="mc") return S.draft.answers[q.id]!=null; if(q.type==="fill") return fa(S.draft.answers[q.id]).filter(x=>x&&x.trim()).length===q.blanks.length; if(q.parts){ const a=(S.draft.essayParts||{})[q.id]||[]; return q.parts.every((pt,i)=>len(a[i])>=4); } return len(S.draft.essays[q.id])>=(q.type==="short"?4:10); }
 function updateProgress(){ const total=ITEMS.length,n=ITEMS.filter(isAnswered).length; $("#progWrap").hidden=false; $("#progBar").style.width=(n/total*100)+"%"; const st=$("#subNote"); if(st) st.textContent=n<total?`未回答が ${total-n} 問あります（未回答は0点）。`:"すべて回答しました。"; }
 function stemNodes(s){ const out=[]; let last=0; const re=/（[\s　]*([①②③④]?)[\s　]*）/g; let m; while((m=re.exec(s))){ out.push(s.slice(last,m.index)); out.push(h("span",{class:"blank"},m[1]||"\u00a0")); last=m.index+m[0].length; } out.push(s.slice(last)); return out; }
 function head(q,no,extra){ return h("div",{class:"qhead"},h("span",{class:"qno"},`問${no}`),h("div",{class:"stem"},stemNodes(q.stem),q.src?h("span",{class:"tag"},q.src):null,q.type==="fill"?h("span",{class:"tag"},"穴埋め"):q.type==="short"?h("span",{class:"tag"},"一問一答"):null,AI_TYPES.has(q.type)?h("span",{class:"tag"},`${q.pts}点`):null),extra||null); }
@@ -204,11 +204,12 @@ function mcBlock(q,no,mode,rec){
     opts.append(h("label",{class:cls,for:id},h("input",{type:"radio",name:q.id,id,checked:chosen===ai,disabled:mode==="result",onchange:()=>{S.draft.answers[q.id]=ai;saveDraft();updateProgress()}}),h("span",{class:"k"},KANA[k]),h("span",{class:"t"},q.ans[ai]))); });
   box.append(opts); if(reveal&&q.exp) box.append(h("div",{class:"exp"},q.exp)); return box;
 }
+const fa = v => Array.isArray(v) ? v : [];
 function fillBlock(q,no,mode,rec){
-  const reveal=mode==="result"&&CFG.showKey, arr=mode==="result"?((rec.answers||{})[q.id]||[]):(S.draft.answers[q.id]||[]);
-  const box=h("div",{class:"q"},head(q,no,mode==="result"?h("span",{class:"redpen"},fillOk(q,arr)?"○":fillRight(q,arr)?"△":"×"):null));
+  const raw=mode==="result"?(rec.answers||{})[q.id]:S.draft.answers[q.id], legacy=mode==="result"&&typeof raw==="number", reveal=mode==="result"&&CFG.showKey, arr=fa(raw);
+  const box=h("div",{class:"q"},head(q,no,mode==="result"?h("span",{class:"redpen"},legacy?(raw===q.legacyMc?"○":"×"):fillOk(q,arr)?"○":fillRight(q,arr)?"△":"×"):null));
   const wrap=h("div",{class:"fill"});
-  q.blanks.forEach((_,i)=>{ const id=`${q.id}_b${i}`; wrap.append(h("label",{for:id},CIRC[i], mode==="result"?h("span",{class:"got",id},arr[i]||"（未回答）"):h("input",{type:"text",id,value:arr[i]||"",autocomplete:"off",maxlength:"30",oninput:e=>{const a=[...(S.draft.answers[q.id]||[])];a[i]=e.target.value;S.draft.answers[q.id]=a;saveDraft();updateProgress();}}))); });
+  q.blanks.forEach((_,i)=>{ const id=`${q.id}_b${i}`; wrap.append(h("label",{for:id},CIRC[i], mode==="result"?h("span",{class:"got",id},legacy?"旧問題（選択）で回答":(arr[i]||"（未回答）")):h("input",{type:"text",id,value:arr[i]||"",autocomplete:"off",maxlength:"30",oninput:e=>{const a=[...fa(S.draft.answers[q.id])];a[i]=e.target.value;S.draft.answers[q.id]=a;saveDraft();updateProgress();}}))); });
   box.append(wrap); if(reveal) box.append(h("div",{class:"key"},"正解："+q.key),q.exp?h("div",{class:"exp"},q.exp):null); return box;
 }
 function aiBlock(q,no,mode,rec){
