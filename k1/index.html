@@ -1,0 +1,227 @@
+<!doctype html>
+<html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>HERO'ZZ 課題と対策テスト</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=BIZ+UDPGothic:wght@400;700&family=Yomogi&family=Shippori+Mincho:wght@600;800&family=Roboto+Mono:wght@500;700&display=swap">
+<link rel="stylesheet" href="../style.css">
+<style>
+@media print{ body{background:#fff;padding:0} .bar-top,.noprint{display:none!important} .sheet{box-shadow:none;border:1px solid #000;margin:0 0 10px} }
+#homeBtn{margin-left:12px;padding:3px 10px;font-size:12px}
+.nw{display:inline-block;white-space:nowrap}
+.cover .theme{font-family:var(--serif);font-weight:700;font-size:16px;letter-spacing:.15em;margin:8px 0 2px}
+.cover table.spec{width:100%;max-width:640px}
+.cover table.spec td:first-child{width:7em}
+.formbox{max-width:640px;margin:20px auto 0;border:1.5px solid var(--ink);text-align:left}
+.frow{display:grid;grid-template-columns:7.5em minmax(0,1fr)}
+.frow+.frow{border-top:1px solid var(--ink)}
+.frow label{display:flex;align-items:center;justify-content:center;padding:10px 8px;font-weight:700;font-family:var(--serif);background:var(--fill);border-right:1.5px solid var(--ink);white-space:nowrap;letter-spacing:.2em}
+.frow input{width:100%;min-width:0;border:0;border-radius:0;font-size:17px;padding:10px 14px;background:var(--paper);font-family:var(--sans)}
+.frow input#pw{font-family:var(--mono);font-size:16px}
+@media (max-width:480px){.frow{grid-template-columns:6em minmax(0,1fr)}.frow label{font-size:13px;letter-spacing:.08em;padding:10px 4px}}
+/* 問題：見るアカウント */
+.acct{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px 16px;align-items:center;margin:14px 0 0;padding:14px 16px;border:1.5px solid var(--ink);background:var(--fill)}
+.acct .who{min-width:0}
+.acct .who b{display:block;font-size:17px;font-family:var(--serif)}
+.acct .who span{font-family:var(--mono);font-size:14px;color:var(--muted)}
+.acct .btn{text-decoration:none;white-space:nowrap}
+@media (max-width:520px){.acct{grid-template-columns:minmax(0,1fr)}.acct .btn{text-align:center}}
+.task{font-family:var(--serif);font-weight:700;font-size:18px;line-height:1.8;margin:18px 0 0;white-space:pre-wrap}
+/* 解答欄 */
+.field{margin:22px 0 0}
+.field-h{display:flex;gap:12px;align-items:baseline;flex-wrap:wrap}
+.field-h .lbl{font-family:var(--serif);font-weight:800;font-size:17px;border:1.5px solid var(--ink);padding:2px 14px;letter-spacing:.2em}
+.field-h .guide{font-size:14.5px;line-height:1.7;flex:1 1 18em;min-width:0;font-family:var(--sans)}
+.field textarea{display:block;width:100%;min-height:200px;margin-top:8px;font-size:16px;line-height:28px;background-origin:content-box;background-clip:content-box;background-attachment:local}
+.field .ans-text{margin-top:8px;padding:10px 14px;border:1px solid var(--ink);white-space:pre-wrap;font-size:15px;line-height:1.8;min-height:3em}
+.sentok{display:flex;gap:8px;align-items:center;font-weight:700;color:var(--ok);margin:10px 0 0}
+.done-h{font-family:var(--serif);font-weight:800;font-size:24px;margin:0 0 6px;letter-spacing:.1em}
+</style>
+</head><body>
+<div class="wrap">
+  <div class="bar-top">
+    <div class="strip">
+      <div class="meta"><span><b id="kai"></b></span><span>試験時間 <b id="lim">10</b>分</span><button class="btn ghost sm noprint" id="homeBtn" hidden>表紙に戻る</button></div>
+      <div class="timer" id="timer"><small>残り</small>10:00</div>
+    </div>
+    <div class="progress" id="progWrap" hidden><i id="progBar"></i></div>
+  </div>
+  <div id="banner"></div>
+  <main id="view"></main>
+</div>
+
+<script>
+/* ============ 設定（config.json）と問題（items.enc.json＝合言葉で復号） ============
+   点数をつけない記述テスト。提出はGoogleフォーム（round:"k1"）→ GASが別スプシ「課題と対策テスト 回答とフィードバック」に1人1行で書く。
+   フィードバックはスプシのG列に書く。 */
+let CFG = {round:"",limitMin:10,closed:false,form:{postUrl:"",entryName:"",entryData:""}};
+let Q = null;
+const BUILD = "2026-10-29 課題と対策テスト v1";
+const PARAMS = new URLSearchParams(location.search);
+const isAdminName = n => { const v=String(n||"").normalize("NFKC").toLowerCase().replace(/[\s　（）()]/g,""); return !!v && (CFG.adminNames||[]).some(a=>String(a).normalize("NFKC").toLowerCase().replace(/[\s　（）()]/g,"")===v); };
+const isTestRun = () => !!S.draft.test || isAdminName(S.draft.name);
+
+/* ============ ユーティリティ ============ */
+const $ = (s, el=document) => el.querySelector(s);
+const h = (tag, attrs={}, ...kids) => {
+  const el = document.createElement(tag);
+  for (const [k,v] of Object.entries(attrs)) { if (v == null || v === false) continue; if (k === "class") el.className = v; else if (k.startsWith("on")) el.addEventListener(k.slice(2), v); else el.setAttribute(k, v === true ? "" : v); }
+  for (const c of kids.flat()) if (c != null && c !== false) el.append(c.nodeType ? c : document.createTextNode(String(c)));
+  return el;
+};
+const fmt = ms => { const t=Math.max(0,Math.ceil(ms/1000)); return String(Math.floor(t/60)).padStart(2,"0")+":"+String(t%60).padStart(2,"0"); };
+const len = s => [...(s||"")].length;
+const fromB64 = s => Uint8Array.from(atob(s),c=>c.charCodeAt(0));
+async function decryptItems(pw){
+  const blob=await (await fetch("items.enc.json?v="+Date.now())).json();
+  const km=await crypto.subtle.importKey("raw",new TextEncoder().encode(pw),"PBKDF2",false,["deriveKey"]);
+  const key=await crypto.subtle.deriveKey({name:"PBKDF2",salt:fromB64(blob.s),iterations:100000,hash:"SHA-256"},km,{name:"AES-GCM",length:256},false,["decrypt"]);
+  const pt=await crypto.subtle.decrypt({name:"AES-GCM",iv:fromB64(blob.iv)},key,fromB64(blob.d));
+  return JSON.parse(new TextDecoder().decode(pt));
+}
+
+/* ============ 状態（この端末だけ） ============ */
+const DKEY="herozz-kadai-k1";
+const S={ draft:{name:"",startedAt:null,parts:{},test:PARAMS.get("test")==="1"}, rec:null, busy:false, err:"", pw:"" };
+function loadDraft(){ try{ const d=JSON.parse(localStorage.getItem(DKEY)||"null"); if(d) S.draft={...S.draft,...d}; S.pw=localStorage.getItem(DKEY+"-pw")||""; }catch(e){} }
+function savePw(){ try{ localStorage.setItem(DKEY+"-pw",S.pw); }catch(e){} }
+let lsT; function saveDraft(){ clearTimeout(lsT); lsT=setTimeout(()=>{try{localStorage.setItem(DKEY,JSON.stringify(S.draft))}catch(e){}},200); }
+
+/* ============ タイマー ============ */
+function remaining(){ if(!S.draft.startedAt) return CFG.limitMin*60000; return CFG.limitMin*60000-(Date.now()-Date.parse(S.draft.startedAt)); }
+setInterval(()=>{ const el=$("#timer");
+  if(S.rec){ el.replaceChildren(h("small",{},"所要"),fmt(Date.parse(S.rec.submittedAt)-Date.parse(S.rec.startedAt))); el.classList.remove("low"); return; }
+  const ms=remaining(); el.replaceChildren(h("small",{},"残り"),fmt(ms)); el.classList.toggle("low",!!S.draft.startedAt&&ms<3*60000);
+  if(S.draft.startedAt&&Q&&ms<=0&&!S.busy) submit(true);
+},500);
+
+/* ============ 描画 ============ */
+function render(){
+  $("#kai").textContent=CFG.round; $("#lim").textContent=CFG.limitMin;
+  const hb=$("#homeBtn"); hb.hidden=!(S.rec||(S.draft.startedAt&&Q&&isTestRun())); hb.onclick=goHome;
+  const b=$("#banner"); b.replaceChildren(); if(S.err) b.append(h("div",{class:"banner err"},S.err));
+  const v=$("#view"); v.replaceChildren(); $("#progWrap").hidden=true;
+  if(S.rec) return renderResult(v,S.rec);
+  if(S.draft.startedAt&&Q) return renderTest(v);
+  renderCover(v);
+}
+function renderCover(v){
+  const resume=!!S.draft.startedAt, ms=Math.max(0,remaining());
+  const startedStr=resume?new Date(S.draft.startedAt).toLocaleTimeString("ja-JP",{hour:"2-digit",minute:"2-digit"}):"";
+  v.append(h("section",{class:"sheet cover"},
+    h("div",{class:"kai"},CFG.round),
+    h("h1",{},h("span",{class:"nw"},"課題と対策"),h("wbr"),h("span",{class:"nw"},"テスト")),h("div",{class:"theme"},"アカウントを見て、課題と対策を書く"),
+    h("div",{class:"booklet"},"問題冊子"),
+    h("table",{class:"spec"},h("tbody",{},
+      h("tr",{},h("td",{},"試験時間"),h("td",{},`${CFG.limitMin}分（開始で計測・動画を見る時間も含む）`)),
+      h("tr",{},h("td",{},"内容"),h("td",{},"指定のアカウントの動画を見て、今のアカウントの「課題」と「対策」を書く")),
+      h("tr",{},h("td",{},"解答"),h("td",{},"記述 2欄（課題／対策）")),
+      h("tr",{},h("td",{},"結果"),h("td",{},"点数は出ません。提出した内容に、あとでフィードバックを返します")),
+      isTestRun()?h("tr",{},h("td",{},"受験の扱い"),h("td",{},"テスト受験（管理者）")):null)),
+    h("div",{class:"notice"},h("div",{class:"notice-h"},"注意事項"),h("ol",{class:"rules"},
+      h("li",{},"講義資料・AIは見ずに、自分の頭で書くこと。"),
+      h("li",{},"見るアカウントは「解答を始める」を押すと表示される。動画はスマホのInstagramで開いて見てよい。"),
+      h("li",{},"課題・対策は、それぞれ400字以内。箇条書きでもよい。"),
+      h("li",{},`「解答を始める」を押すと${CFG.limitMin}分の計測が始まる。途中で閉じても計測は止まらない（書いた内容は保存される）。`),
+      h("li",{},`${CFG.limitMin}分たつと、その時点の内容で自動的に提出される。提出後の訂正はできない。`))),
+    CFG.closed?h("div",{class:"banner err",style:"max-width:640px;margin:20px auto 0"},"このテストの受付は終了しました。"):null,
+    resume?h("div",{class:"banner warn",style:"text-align:left;max-width:640px;margin:20px auto 0"},
+      ms>0?`${S.draft.name||"あなた"}さんの受験中の答案があります（${startedStr} 開始・残り ${fmt(ms)}）。時間は止まっていません。合言葉を入れて「続きから再開する」を押してください。`
+          :`試験時間が終了しています。合言葉を入れて押すと、保存されている内容でそのまま提出されます。`):null,
+    h("div",{class:"formbox"},
+      h("div",{class:"frow"},h("label",{for:"nm"},"氏名"),
+        h("input",{type:"text",id:"nm",value:S.draft.name,autocomplete:"name",placeholder:"お名前（例：山田花子）",disabled:resume,oninput:e=>{S.draft.name=e.target.value;saveDraft();$("#go").disabled=!canStart();$("#adminNote").hidden=!isTestRun();}})),
+      h("div",{class:"frow"},h("label",{for:"pw"},"合言葉"),
+        h("input",{type:"text",id:"pw",value:S.pw,autocomplete:"off",autocapitalize:"off",placeholder:"当日お伝えします",oninput:e=>{S.pw=e.target.value.trim();$("#go").disabled=!canStart()}}))),
+    h("p",{class:"note",id:"adminNote",hidden:!isTestRun(),style:"max-width:640px;margin:6px auto 0;text-align:left"},"管理者として登録されています。テスト受験（何回でも受けられる・スプシに「テスト」と付く）になります。"),
+    h("div",{class:"center",style:"margin-top:20px"},
+      h("button",{class:"btn red",id:"go",disabled:!canStart(),onclick:start},S.busy?"問題を開いています…":resume?(ms>0?"続きから再開する":"保存した内容で提出する"):`解答を始める（${CFG.limitMin}分）`)),
+    h("div",{class:"note",style:"text-align:right;margin-top:14px;font-size:11px"},"版 "+BUILD)
+  ));
+}
+const canStart=()=>S.draft.name.trim()&&S.pw&&!S.busy&&(!CFG.closed||!!S.draft.startedAt);
+async function start(){
+  S.busy=true; S.err=""; render();
+  try{ Q=await decryptItems(S.pw); }catch(e){ S.busy=false; S.err="合言葉が違います。"; render(); return; }
+  savePw();
+  if(!S.draft.startedAt){ S.draft.startedAt=new Date().toISOString(); saveDraft(); }
+  S.busy=false; render(); scrollTo(0,0);
+}
+function updateProgress(){ const n=Q.parts.filter(p=>len((S.draft.parts[p.key]||"").trim())>=10).length; $("#progWrap").hidden=false; $("#progBar").style.width=(n/Q.parts.length*100)+"%";
+  const st=$("#subNote"); if(st) st.textContent=n<Q.parts.length?"まだ書いていない欄があります。":"両方の欄が書けています。"; }
+function questionBlock(){
+  const a=Q.account;
+  return [h("h2",{class:"part"},h("span",{class:"bigq"},"問題"),h("span",{class:"pts"},"（記述）")),
+    h("div",{class:"acct"},h("div",{class:"who"},h("b",{},a.name),h("span",{},a.handle)),
+      h("a",{class:"btn ghost sm noprint",href:a.url,target:"_blank",rel:"noopener"},"Instagramで開く ↗")),
+    h("p",{class:"task"},Q.task)];
+}
+function renderTest(v){
+  const sec=h("section",{class:"sheet"},questionBlock());
+  for(const p of Q.parts){
+    const c=h("div",{class:"count"});
+    const ta=h("textarea",{id:"ta_"+p.key,maxlength:String(p.max),placeholder:p.placeholder||"",oninput:ev=>{S.draft.parts[p.key]=ev.target.value;paint();saveDraft();updateProgress()}},S.draft.parts[p.key]||"");
+    const paint=()=>{const n=len(ta.value);c.textContent=`${n} / ${p.max}字`;c.classList.toggle("over",n>p.max)}; paint();
+    sec.append(h("div",{class:"field"},h("div",{class:"field-h"},h("span",{class:"lbl"},p.label),h("span",{class:"guide"},p.guide)),ta,c));
+  }
+  v.append(sec, h("section",{class:"sheet center noprint"},h("p",{class:"note",id:"subNote"}),h("button",{class:"btn red",id:"submit",disabled:S.busy,onclick:()=>{ if(confirm("提出します。提出後の訂正はできません。よろしいですか？")) submit(false); }},S.busy?"提出しています…":"答案を提出する")));
+  updateProgress();
+}
+
+/* ============ 提出：Googleフォームへ送信（ログイン不要） ============ */
+async function sendToForm(rec){
+  if(!CFG.form.postUrl) throw new Error("送信先が未設定");
+  const fd=new FormData(); fd.append(CFG.form.entryName,rec.name);
+  fd.append(CFG.form.entryData,JSON.stringify({round:"k1",id:rec.id,name:rec.name,startedAt:rec.startedAt,submittedAt:rec.submittedAt,parts:rec.parts,auto:rec.auto,test:rec.test}));
+  await fetch(CFG.form.postUrl,{method:"POST",mode:"no-cors",body:fd});
+}
+async function submit(auto){
+  if(S.busy||!S.draft.startedAt||!Q) return;
+  S.busy=true; render();
+  const parts={}; for(const p of Q.parts) parts[p.key]=[...(S.draft.parts[p.key]||"")].slice(0,p.max).join("");
+  const rec={id:Math.random().toString(36).slice(2,12),name:S.draft.name.trim(),startedAt:S.draft.startedAt,submittedAt:new Date(Math.min(Date.now(),Date.parse(S.draft.startedAt)+CFG.limitMin*60000)).toISOString(),parts,auto:!!auto,test:isTestRun()};
+  let sent=true; try{ await sendToForm(rec); }catch(e){ sent=false; }
+  rec.sent=sent; S.rec=rec;
+  try{ if(rec.test) localStorage.removeItem(DKEY+"-rec"); else localStorage.setItem(DKEY+"-rec",JSON.stringify(rec)); localStorage.removeItem(DKEY); }catch(e){}
+  S.draft={name:rec.name,startedAt:null,parts:{},test:S.draft.test};
+  S.busy=false; S.err=sent?"":"送信に失敗しました（電波を確認して「もう一度送る」を押してください）。"; render(); scrollTo(0,0);
+}
+function renderResult(v,rec){
+  v.append(h("section",{class:"sheet"},
+    h("p",{class:"done-h"},rec.auto?"時間切れで提出しました":"提出しました"),
+    h("p",{style:"margin:0;font-weight:700"},`${rec.name} さん　${new Date(rec.submittedAt).toLocaleString("ja-JP")}`),
+    rec.test?h("div",{class:"banner warn"},"テスト受験です（スプシに「テスト」と付いて保存されます）。"):null,
+    rec.sent!==false?h("p",{class:"sentok"},"✓ 答案は送信されました。フィードバックはあとでお返しします。この画面は閉じて大丈夫です。"):null,
+    h("div",{class:"noprint"},
+      rec.sent===false?h("div",{class:"row",style:"margin-top:8px"},h("button",{class:"btn sm",onclick:async ev=>{const b=ev.currentTarget;b.disabled=true;b.textContent="送っています…";try{await sendToForm(rec);rec.sent=true;S.err="";try{if(!rec.test)localStorage.setItem(DKEY+"-rec",JSON.stringify(rec));}catch(x){}render();}catch(e){b.disabled=false;b.textContent="もう一度送る";}}},"もう一度送る")):null,
+      h("div",{class:"row",style:"margin-top:10px"},h("button",{class:"btn ghost sm",onclick:()=>window.print()},"印刷／PDFに保存")),
+      h("p",{class:"note",style:"margin:14px 0 0"},h("a",{href:"#",style:"color:var(--muted)",onclick:e=>{e.preventDefault(); if(!confirm("この端末に保存された答案を消して、表紙に戻ります。送信済みの答案は消えません。よろしいですか？")) return;
+        try{ localStorage.removeItem(DKEY+"-rec"); localStorage.removeItem(DKEY); }catch(x){} S.rec=null; S.err=""; S.draft={name:"",startedAt:null,parts:{},test:PARAMS.get("test")==="1"}; render(); scrollTo(0,0);}},"この端末で別の人が受験する")))));
+  const sec=h("section",{class:"sheet"},Q?questionBlock():null);
+  for(const p of (Q?Q.parts:[{key:"kadai",label:"課題"},{key:"taisaku",label:"対策"}]))
+    sec.append(h("div",{class:"field"},h("div",{class:"field-h"},h("span",{class:"lbl"},p.label)),h("div",{class:"ans-text"},rec.parts[p.key]||"（未記入）")));
+  v.append(sec);
+}
+function goHome(){
+  if(S.draft.startedAt&&!S.rec&&!confirm("表紙に戻ります。書いた内容は消え、タイマーは"+CFG.limitMin+"分に戻ります。よろしいですか？")) return;
+  try{ localStorage.removeItem(DKEY); if(!S.rec||S.rec.test) localStorage.removeItem(DKEY+"-rec"); }catch(e){}
+  S.draft={name:S.draft.name||(S.rec&&S.rec.name)||"",startedAt:null,parts:{},test:PARAMS.get("test")==="1"};
+  S.rec=null; S.err=""; render(); scrollTo(0,0);
+}
+
+/* ============ 起動 ============ */
+(async()=>{
+  loadDraft();
+  try{ CFG={...CFG,...(await (await fetch("config.json?v="+Date.now())).json())}; }catch(e){}
+  /* 時間切れなのに何も書いていない下書き（開いただけで放置）は捨てる */
+  if(S.draft.startedAt && remaining()<=0 && !Object.values(S.draft.parts||{}).some(v=>v&&String(v).trim())){
+    S.draft={name:S.draft.name,startedAt:null,parts:{},test:S.draft.test}; try{ localStorage.removeItem(DKEY); }catch(e){}
+  }
+  if(S.pw){ try{ Q=await decryptItems(S.pw); }catch(e){ Q=null; } }
+  if(!S.draft.startedAt){ try{ const rec=JSON.parse(localStorage.getItem(DKEY+"-rec")||"null"); if(rec&&rec.submittedAt&&!rec.test) S.rec=rec; }catch(e){} }
+  render();
+  setInterval(async()=>{ try{ const c=await (await fetch("config.json?v="+Date.now())).json(); const was=CFG.closed; CFG={...CFG,...c};
+    if(CFG.closed&&S.draft.startedAt&&Q&&!S.busy&&!S.rec){ S.err="管理者が受付を止めました。ここまでの内容で提出しました。"; submit(true); }
+    else if(CFG.closed!==was&&!S.draft.startedAt&&!S.rec) render(); }catch(e){} },30000);
+})();
+</script>
+</body></html>
