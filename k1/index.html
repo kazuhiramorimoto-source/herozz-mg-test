@@ -55,7 +55,7 @@
    フィードバックはスプシのG列に書く。 */
 let CFG = {round:"",limitMin:10,closed:false,form:{postUrl:"",entryName:"",entryData:""}};
 let Q = null;
-const BUILD = "2026-10-29 第3回 課題と対策 v1.1";
+const BUILD = "2026-10-29 第3回 課題と対策 v1.2（生徒へのフィードバック形式）";
 const PARAMS = new URLSearchParams(location.search);
 const isAdminName = n => { const v=String(n||"").normalize("NFKC").toLowerCase().replace(/[\s　（）()]/g,""); return !!v && (CFG.adminNames||[]).some(a=>String(a).normalize("NFKC").toLowerCase().replace(/[\s　（）()]/g,"")===v); };
 const isTestRun = () => !!S.draft.test || isAdminName(S.draft.name);
@@ -109,11 +109,11 @@ function renderCover(v){
   const startedStr=resume?new Date(S.draft.startedAt).toLocaleTimeString("ja-JP",{hour:"2-digit",minute:"2-digit"}):"";
   v.append(h("section",{class:"sheet cover"},
     h("div",{class:"kai"},CFG.round),
-    h("h1",{},h("span",{class:"nw"},"課題と対策"),h("wbr"),h("span",{class:"nw"},"テスト")),h("div",{class:"theme"},"アカウントを見て、課題と対策を書く"),
+    h("h1",{},h("span",{class:"nw"},"課題と対策"),h("wbr"),h("span",{class:"nw"},"テスト")),h("div",{class:"theme"},"生徒のアカウントに、課題と対策のフィードバックを出す"),
     h("div",{class:"booklet"},"問題冊子"),
     h("table",{class:"spec"},h("tbody",{},
       h("tr",{},h("td",{},"試験時間"),h("td",{},`${CFG.limitMin}分（開始で計測・動画を見る時間も含む）`)),
-      h("tr",{},h("td",{},"内容"),h("td",{},"指定のアカウントの動画を見て、今のアカウントの「課題」と「対策」を書く")),
+      h("tr",{},h("td",{},"内容"),h("td",{},"生徒のアカウントの目的と今の運営を読み、動画を見て「課題」と「対策」のフィードバックを書く")),
       h("tr",{},h("td",{},"解答"),h("td",{},"記述 2欄（課題／対策）")),
       h("tr",{},h("td",{},"結果"),h("td",{},"点数は出ません。提出した内容に、あとでフィードバックを返します")),
       isTestRun()?h("tr",{},h("td",{},"受験の扱い"),h("td",{},"テスト受験（管理者）")):null)),
