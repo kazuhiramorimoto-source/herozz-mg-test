@@ -25,7 +25,11 @@
 .acct .who span{font-family:var(--mono);font-size:14px;color:var(--muted)}
 .acct .btn{text-decoration:none;white-space:nowrap}
 @media (max-width:520px){.acct{grid-template-columns:minmax(0,1fr)}.acct .btn{text-align:center}}
+.acct .who a.url{display:block;margin-top:4px;font-family:var(--mono);font-size:13.5px;color:var(--blue);word-break:break-all}
 .task{font-family:var(--serif);font-weight:700;font-size:18px;line-height:1.8;margin:18px 0 0;white-space:pre-wrap}
+.issues{margin:16px 0 0;border:1.5px solid var(--ink);padding:10px 16px 12px}
+.issues-h{font-family:var(--serif);font-weight:800;font-size:15px;letter-spacing:.1em;border-bottom:1px solid var(--ink);padding-bottom:4px;margin-bottom:6px}
+.issues ul{margin:0;padding-left:1.4em;font-size:16px;line-height:1.9;font-weight:700}
 /* 解答欄 */
 .field{margin:22px 0 0}
 .field-h{display:flex;gap:12px;align-items:baseline;flex-wrap:wrap}
@@ -55,7 +59,7 @@
    フィードバックはスプシのG列に書く。 */
 let CFG = {round:"",limitMin:10,closed:false,form:{postUrl:"",entryName:"",entryData:""}};
 let Q = null;
-const BUILD = "2026-10-29 第3回 課題と対策 v1.2（生徒へのフィードバック形式）";
+const BUILD = "2026-10-29 第3回 課題と対策 v1.3（生徒から上がった問題・URL）";
 const PARAMS = new URLSearchParams(location.search);
 const isAdminName = n => { const v=String(n||"").normalize("NFKC").toLowerCase().replace(/[\s　（）()]/g,""); return !!v && (CFG.adminNames||[]).some(a=>String(a).normalize("NFKC").toLowerCase().replace(/[\s　（）()]/g,"")===v); };
 const isTestRun = () => !!S.draft.test || isAdminName(S.draft.name);
@@ -151,9 +155,11 @@ function updateProgress(){ const n=Q.parts.filter(p=>len((S.draft.parts[p.key]||
 function questionBlock(){
   const a=Q.account;
   return [h("h2",{class:"part"},h("span",{class:"bigq"},"問題"),h("span",{class:"pts"},"（記述）")),
-    h("div",{class:"acct"},h("div",{class:"who"},h("b",{},a.name),h("span",{},a.handle)),
+    h("div",{class:"acct"},h("div",{class:"who"},h("b",{},a.name),h("span",{},a.handle),h("a",{class:"url",href:a.url,target:"_blank",rel:"noopener"},a.url)),
       h("a",{class:"btn ghost sm noprint",href:a.url,target:"_blank",rel:"noopener"},"Instagramで開く ↗")),
-    h("p",{class:"task"},Q.task)];
+    h("p",{class:"task"},Q.task),
+    Q.issues?h("div",{class:"issues"},h("div",{class:"issues-h"},"生徒から上がってきている問題"),h("ul",{},Q.issues.map(x=>h("li",{},x)))):null,
+    Q.ask?h("p",{class:"task"},Q.ask):null];
 }
 function renderTest(v){
   const sec=h("section",{class:"sheet"},questionBlock());
