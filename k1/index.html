@@ -55,7 +55,7 @@
    フィードバックはスプシのG列に書く。 */
 let CFG = {round:"",limitMin:10,closed:false,form:{postUrl:"",entryName:"",entryData:""}};
 let Q = null;
-const BUILD = "2026-10-29 課題と対策テスト v1";
+const BUILD = "2026-10-29 第3回 課題と対策 v1.1";
 const PARAMS = new URLSearchParams(location.search);
 const isAdminName = n => { const v=String(n||"").normalize("NFKC").toLowerCase().replace(/[\s　（）()]/g,""); return !!v && (CFG.adminNames||[]).some(a=>String(a).normalize("NFKC").toLowerCase().replace(/[\s　（）()]/g,"")===v); };
 const isTestRun = () => !!S.draft.test || isAdminName(S.draft.name);
