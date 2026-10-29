@@ -59,7 +59,7 @@
    フィードバックはスプシのG列に書く。 */
 let CFG = {round:"",limitMin:10,closed:false,form:{postUrl:"",entryName:"",entryData:""}};
 let Q = null;
-const BUILD = "2026-10-29 第3回 課題と対策 v1.3（生徒から上がった問題・URL）";
+const BUILD = "2026-10-29 第3回 課題と対策 v2（3問・100点）";
 const PARAMS = new URLSearchParams(location.search);
 const isAdminName = n => { const v=String(n||"").normalize("NFKC").toLowerCase().replace(/[\s　（）()]/g,""); return !!v && (CFG.adminNames||[]).some(a=>String(a).normalize("NFKC").toLowerCase().replace(/[\s　（）()]/g,"")===v); };
 const isTestRun = () => !!S.draft.test || isAdminName(S.draft.name);
@@ -113,18 +113,21 @@ function renderCover(v){
   const startedStr=resume?new Date(S.draft.startedAt).toLocaleTimeString("ja-JP",{hour:"2-digit",minute:"2-digit"}):"";
   v.append(h("section",{class:"sheet cover"},
     h("div",{class:"kai"},CFG.round),
-    h("h1",{},h("span",{class:"nw"},"課題と対策"),h("wbr"),h("span",{class:"nw"},"テスト")),h("div",{class:"theme"},"生徒のアカウントに、課題と対策のフィードバックを出す"),
+    h("h1",{},h("span",{class:"nw"},"課題と対策"),h("wbr"),h("span",{class:"nw"},"テスト")),h("div",{class:"theme"},"伸びている理由・伸びていない理由を言語化し、課題と対策を出す"),
     h("div",{class:"booklet"},"問題冊子"),
     h("table",{class:"spec"},h("tbody",{},
       h("tr",{},h("td",{},"試験時間"),h("td",{},`${CFG.limitMin}分（開始で計測・動画を見る時間も含む）`)),
-      h("tr",{},h("td",{},"内容"),h("td",{},"生徒のアカウントの目的と今の運営を読み、動画を見て「課題」と「対策」のフィードバックを書く")),
-      h("tr",{},h("td",{},"解答"),h("td",{},"記述 2欄（課題／対策）")),
-      h("tr",{},h("td",{},"結果"),h("td",{},"点数は出ません。提出した内容に、あとでフィードバックを返します")),
+      h("tr",{},h("td",{},"内容"),h("td",{},"生徒のアカウントの目的と今の運営を読み、動画を見て書く")),
+      h("tr",{},h("td",{},"問1"),h("td",{},"伸びている理由　記述（30点）")),
+      h("tr",{},h("td",{},"問2"),h("td",{},"伸びていない理由　記述（30点）")),
+      h("tr",{},h("td",{},"問3"),h("td",{},"課題と対策のフィードバック　記述（40点）")),
+      h("tr",{},h("td",{},"満点"),h("td",{},"100点")),
+      h("tr",{},h("td",{},"結果"),h("td",{},"点数とフィードバックは、あとでお返しします")),
       isTestRun()?h("tr",{},h("td",{},"受験の扱い"),h("td",{},"テスト受験（管理者）")):null)),
     h("div",{class:"notice"},h("div",{class:"notice-h"},"注意事項"),h("ol",{class:"rules"},
       h("li",{},"講義資料・AIは見ずに、自分の頭で書くこと。"),
       h("li",{},"見るアカウントは「解答を始める」を押すと表示される。動画はスマホのInstagramで開いて見てよい。"),
-      h("li",{},"課題・対策は、それぞれ400字以内。箇条書きでもよい。"),
+      h("li",{},"それぞれ欄の字数以内で書く。箇条書きでもよい。"),
       h("li",{},`「解答を始める」を押すと${CFG.limitMin}分の計測が始まる。途中で閉じても計測は止まらない（書いた内容は保存される）。`),
       h("li",{},`${CFG.limitMin}分たつと、その時点の内容で自動的に提出される。提出後の訂正はできない。`))),
     CFG.closed?h("div",{class:"banner err",style:"max-width:640px;margin:20px auto 0"},"このテストの受付は終了しました。"):null,
@@ -150,26 +153,36 @@ async function start(){
   if(!S.draft.startedAt){ S.draft.startedAt=new Date().toISOString(); saveDraft(); }
   S.busy=false; render(); scrollTo(0,0);
 }
-function updateProgress(){ const n=Q.parts.filter(p=>len((S.draft.parts[p.key]||"").trim())>=10).length; $("#progWrap").hidden=false; $("#progBar").style.width=(n/Q.parts.length*100)+"%";
-  const st=$("#subNote"); if(st) st.textContent=n<Q.parts.length?"まだ書いていない欄があります。":"両方の欄が書けています。"; }
-function questionBlock(){
+/* 設問は Q.questions（問1・問2…）。各設問の記入欄 parts をまとめて扱う */
+const allParts = () => Q.questions.flatMap(q=>q.parts);
+function updateProgress(){ const ps=allParts(), n=ps.filter(p=>len((S.draft.parts[p.key]||"").trim())>=10).length; $("#progWrap").hidden=false; $("#progBar").style.width=(n/ps.length*100)+"%";
+  const st=$("#subNote"); if(st) st.textContent=n<ps.length?`まだ書いていない欄が ${ps.length-n} つあります。`:"すべての欄が書けています。"; }
+const linkBox = (title,sub,url) => h("div",{class:"acct"},h("div",{class:"who"},h("b",{},title),sub?h("span",{},sub):null,h("a",{class:"url",href:url,target:"_blank",rel:"noopener"},url)),
+  h("a",{class:"btn ghost sm noprint",href:url,target:"_blank",rel:"noopener"},"Instagramで開く ↗"));
+function premiseBlock(){
   const a=Q.account;
-  return [h("h2",{class:"part"},h("span",{class:"bigq"},"問題"),h("span",{class:"pts"},"（記述）")),
-    h("div",{class:"acct"},h("div",{class:"who"},h("b",{},a.name),h("span",{},a.handle),h("a",{class:"url",href:a.url,target:"_blank",rel:"noopener"},a.url)),
-      h("a",{class:"btn ghost sm noprint",href:a.url,target:"_blank",rel:"noopener"},"Instagramで開く ↗")),
+  return h("section",{class:"sheet"},h("h2",{class:"part"},h("span",{class:"bigq"},"前提"),h("span",{class:"pts"},"（全問共通）")),
+    linkBox(a.name,a.handle,a.url),
     h("p",{class:"task"},Q.task),
     Q.issues?h("div",{class:"issues"},h("div",{class:"issues-h"},"生徒から上がってきている問題"),h("ul",{},Q.issues.map(x=>h("li",{},x)))):null,
-    Q.ask?h("p",{class:"task"},Q.ask):null];
+    Q.ask?h("p",{class:"task"},Q.ask):null);
 }
-function renderTest(v){
-  const sec=h("section",{class:"sheet"},questionBlock());
-  for(const p of Q.parts){
+/* mode="test"＝記入欄／"result"＝提出した答案 */
+function questionSheet(q,mode,rec){
+  const sec=h("section",{class:"sheet"},h("h2",{class:"part"},h("span",{class:"bigq"},`問${q.no}`),h("span",{class:"pts"},`${q.title}（配点 ${q.pts}）`)),
+    q.link?linkBox(q.link.label,null,q.link.url):null, h("p",{class:"task"},q.stem));
+  for(const p of q.parts){
+    if(mode==="result"){ sec.append(h("div",{class:"field"},h("div",{class:"field-h"},h("span",{class:"lbl"},p.label)),h("div",{class:"ans-text"},(rec.parts||{})[p.key]||"（未記入）"))); continue; }
     const c=h("div",{class:"count"});
     const ta=h("textarea",{id:"ta_"+p.key,maxlength:String(p.max),placeholder:p.placeholder||"",oninput:ev=>{S.draft.parts[p.key]=ev.target.value;paint();saveDraft();updateProgress()}},S.draft.parts[p.key]||"");
     const paint=()=>{const n=len(ta.value);c.textContent=`${n} / ${p.max}字`;c.classList.toggle("over",n>p.max)}; paint();
     sec.append(h("div",{class:"field"},h("div",{class:"field-h"},h("span",{class:"lbl"},p.label),h("span",{class:"guide"},p.guide)),ta,c));
   }
-  v.append(sec, h("section",{class:"sheet center noprint"},h("p",{class:"note",id:"subNote"}),h("button",{class:"btn red",id:"submit",disabled:S.busy,onclick:()=>{ if(confirm("提出します。提出後の訂正はできません。よろしいですか？")) submit(false); }},S.busy?"提出しています…":"答案を提出する")));
+  return sec;
+}
+function renderTest(v){
+  v.append(premiseBlock(), ...Q.questions.map(q=>questionSheet(q,"test")));
+  v.append(h("section",{class:"sheet center noprint"},h("p",{class:"note",id:"subNote"}),h("button",{class:"btn red",id:"submit",disabled:S.busy,onclick:()=>{ if(confirm("提出します。提出後の訂正はできません。よろしいですか？")) submit(false); }},S.busy?"提出しています…":"答案を提出する")));
   updateProgress();
 }
 
@@ -183,7 +196,7 @@ async function sendToForm(rec){
 async function submit(auto){
   if(S.busy||!S.draft.startedAt||!Q) return;
   S.busy=true; render();
-  const parts={}; for(const p of Q.parts) parts[p.key]=[...(S.draft.parts[p.key]||"")].slice(0,p.max).join("");
+  const parts={}; for(const p of allParts()) parts[p.key]=[...(S.draft.parts[p.key]||"")].slice(0,p.max).join("");
   const rec={id:Math.random().toString(36).slice(2,12),name:S.draft.name.trim(),startedAt:S.draft.startedAt,submittedAt:new Date(Math.min(Date.now(),Date.parse(S.draft.startedAt)+CFG.limitMin*60000)).toISOString(),parts,auto:!!auto,test:isTestRun()};
   let sent=true; try{ await sendToForm(rec); }catch(e){ sent=false; }
   rec.sent=sent; S.rec=rec;
@@ -202,10 +215,8 @@ function renderResult(v,rec){
       h("div",{class:"row",style:"margin-top:10px"},h("button",{class:"btn ghost sm",onclick:()=>window.print()},"印刷／PDFに保存")),
       h("p",{class:"note",style:"margin:14px 0 0"},h("a",{href:"#",style:"color:var(--muted)",onclick:e=>{e.preventDefault(); if(!confirm("この端末に保存された答案を消して、表紙に戻ります。送信済みの答案は消えません。よろしいですか？")) return;
         try{ localStorage.removeItem(DKEY+"-rec"); localStorage.removeItem(DKEY); }catch(x){} S.rec=null; S.err=""; S.draft={name:"",startedAt:null,parts:{},test:PARAMS.get("test")==="1"}; render(); scrollTo(0,0);}},"この端末で別の人が受験する")))));
-  const sec=h("section",{class:"sheet"},Q?questionBlock():null);
-  for(const p of (Q?Q.parts:[{key:"kadai",label:"課題"},{key:"taisaku",label:"対策"}]))
-    sec.append(h("div",{class:"field"},h("div",{class:"field-h"},h("span",{class:"lbl"},p.label)),h("div",{class:"ans-text"},rec.parts[p.key]||"（未記入）")));
-  v.append(sec);
+  if(Q) v.append(premiseBlock(), ...Q.questions.map(q=>questionSheet(q,"result",rec)));
+  else { const sec=h("section",{class:"sheet"}); for(const [k,t] of Object.entries(rec.parts||{})) sec.append(h("div",{class:"field"},h("div",{class:"ans-text"},t||"（未記入）"))); v.append(sec); }
 }
 function goHome(){
   if(S.draft.startedAt&&!S.rec&&!confirm("表紙に戻ります。書いた内容は消え、タイマーは"+CFG.limitMin+"分に戻ります。よろしいですか？")) return;
