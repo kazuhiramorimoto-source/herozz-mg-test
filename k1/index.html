@@ -39,6 +39,10 @@
 .field .ans-text{margin-top:8px;padding:10px 14px;border:1px solid var(--ink);white-space:pre-wrap;font-size:15px;line-height:1.8;min-height:3em}
 .sentok{display:flex;gap:8px;align-items:center;font-weight:700;color:var(--ok);margin:10px 0 0}
 .done-h{font-family:var(--serif);font-weight:800;font-size:24px;margin:0 0 6px;letter-spacing:.1em}
+.rank-me{font-size:20px;font-weight:700;margin:12px 0 4px}
+.rank-me b{font-family:var(--pen);color:var(--red);font-size:34px;margin:0 4px}
+#scoreSec table.rank{margin-top:16px}
+.rank-upd{font-size:12px;color:var(--muted);margin-top:8px;text-align:right}
 </style>
 </head><body>
 <div class="wrap">
@@ -55,11 +59,12 @@
 
 <script>
 /* ============ 設定（config.json）と問題（items.enc.json＝合言葉で復号） ============
-   点数をつけない記述テスト。提出はGoogleフォーム（round:"k1"）→ GASが別スプシ「課題と対策テスト 回答とフィードバック」に1人1行で書く。
-   フィードバックはスプシのG列に書く。 */
+   記述テスト（第3回）。提出はGoogleフォーム（round:"k1"）→ GASが「第3回 回答一覧」に1人1行で書く →
+   Macの同期（sync.py）が Claude で採点して点数を書き、rank.enc.json（点数と順位）を公開 → このページが読んで表示する。
+   模範解答・講評はページに出さない。同じ名前で受けられるのは1回だけ（taken.json＝受験済みの名前のハッシュ）。 */
 let CFG = {round:"",limitMin:10,closed:false,form:{postUrl:"",entryName:"",entryData:""}};
 let Q = null;
-const BUILD = "2026-10-29 第3回 課題と対策 v2（3問・100点）";
+const BUILD = "2026-10-29 第3回 課題と対策 v3（採点・順位・1人1回）";
 const PARAMS = new URLSearchParams(location.search);
 const isAdminName = n => { const v=String(n||"").normalize("NFKC").toLowerCase().replace(/[\s　（）()]/g,""); return !!v && (CFG.adminNames||[]).some(a=>String(a).normalize("NFKC").toLowerCase().replace(/[\s　（）()]/g,"")===v); };
 const isTestRun = () => !!S.draft.test || isAdminName(S.draft.name);
@@ -122,10 +127,11 @@ function renderCover(v){
       h("tr",{},h("td",{},"問2"),h("td",{},"伸びていない理由　記述（30点）")),
       h("tr",{},h("td",{},"問3"),h("td",{},"課題と対策のフィードバック　記述（40点）")),
       h("tr",{},h("td",{},"満点"),h("td",{},"100点")),
-      h("tr",{},h("td",{},"結果"),h("td",{},"点数とフィードバックは、あとでお返しします")),
+      h("tr",{},h("td",{},"結果"),h("td",{},"提出から2〜3分で、点数と順位が出ます")),
       isTestRun()?h("tr",{},h("td",{},"受験の扱い"),h("td",{},"テスト受験（管理者）")):null)),
     h("div",{class:"notice"},h("div",{class:"notice-h"},"注意事項"),h("ol",{class:"rules"},
       h("li",{},"講義資料・AIは見ずに、自分の頭で書くこと。"),
+      h("li",{},"同じ名前で受験できるのは1回だけ。"),
       h("li",{},"見るアカウントは「解答を始める」を押すと表示される。動画はスマホのInstagramで開いて見てよい。"),
       h("li",{},"それぞれ欄の字数以内で書く。箇条書きでもよい。"),
       h("li",{},`「解答を始める」を押すと${CFG.limitMin}分の計測が始まる。途中で閉じても計測は止まらない（書いた内容は保存される）。`),
@@ -150,9 +156,41 @@ async function start(){
   S.busy=true; S.err=""; render();
   try{ Q=await decryptItems(S.pw); }catch(e){ S.busy=false; S.err="合言葉が違います。"; render(); return; }
   savePw();
-  if(!S.draft.startedAt){ S.draft.startedAt=new Date().toISOString(); saveDraft(); }
+  if(!S.draft.startedAt){
+    if(!isTestRun() && await nameTaken(S.draft.name)){ S.busy=false; S.err="この名前ではすでに受験済みです（同じ名前で受けられるのは1回だけです）。"; render(); return; }
+    S.draft.startedAt=new Date().toISOString(); saveDraft(); }
   S.busy=false; render(); scrollTo(0,0);
 }
+/* 同じ名前で1回だけ：受験済みの名前のハッシュ（taken.json・同期が更新）と照らす。名前は空白・括弧・全角半角を無視 */
+const normName = s => String(s||"").normalize("NFKC").toLowerCase().replace(/[\s　「」『』()（）・,，、。.＝=]/g,"");
+async function sha256hex(s){ const b=await crypto.subtle.digest("SHA-256",new TextEncoder().encode(s)); return [...new Uint8Array(b)].map(x=>x.toString(16).padStart(2,"0")).join(""); }
+async function nameTaken(name){ try{ const j=await (await fetch("taken.json?v="+Date.now())).json(); return (j.h||[]).includes(await sha256hex((j.salt||"")+normName(name))); }catch(e){ return false; } }
+
+/* ============ 点数と順位（rank.enc.json＝同期が採点後に公開・合言葉で復号）。点数も順位もこの1ファイルから出すので、ずれない ============ */
+async function loadRank(){ if(!S.pw) return; try{ const blob=await (await fetch("rank.enc.json?v="+Date.now(),{cache:"no-store"})).json();
+  const km=await crypto.subtle.importKey("raw",new TextEncoder().encode(S.pw),"PBKDF2",false,["deriveKey"]);
+  const key=await crypto.subtle.deriveKey({name:"PBKDF2",salt:fromB64(blob.s),iterations:100000,hash:"SHA-256"},km,{name:"AES-GCM",length:256},false,["decrypt"]);
+  S.rank=JSON.parse(new TextDecoder().decode(await crypto.subtle.decrypt({name:"AES-GCM",iv:fromB64(blob.iv)},key,fromB64(blob.d)))); }catch(e){} }
+const n1 = x => x==null ? "―" : String(Math.round(x*10)/10);
+function bar(l,v,max){ return h("div",{class:"bar"},h("span",{},l),h("div",{class:"t"},h("i",{style:`width:${max&&v!=null?v/max*100:0}%;background:var(--ink)`})),h("span",{class:"v"},`${n1(v)}/${max}`)); }
+function scoreSection(rec){
+  const x=S.rank&&S.rank.scores&&S.rank.scores[rec.id];
+  const sec=h("section",{class:"sheet",id:"scoreSec"},h("h2",{class:"part"},h("span",{class:"bigq"},"結果"),h("span",{class:"pts"},"（100点満点）")));
+  if(!x){ sec.append(h("p",{class:"note",style:"font-size:15px"},h("span",{class:"pill wait"},"採点中"),"　記述を採点しています。2〜3分で点数と順位が出ます（この画面は自動で更新されます）。")); return sec; }
+  if(x.st==="無効"){ sec.append(h("div",{class:"banner warn"},"この名前ではすでに受験済みのため、この答案は採点・順位の対象外です。")); return sec; }
+  const rows=S.rank.rows||[], me=rows.find(r=>r[3]===rec.id);
+  sec.append(h("div",{class:"result"},
+    h("div",{class:"stamp"},h("div",{class:"center"},h("b",{},n1(x.t)),h("span",{},"点 / 100"))),
+    h("div",{},h("div",{class:"bars"},(Q?Q.questions:[{no:1,pts:30},{no:2,pts:30},{no:3,pts:40}]).map((q,i)=>bar(`問${q.no}`,(x.q||[])[i],q.pts))),
+      rec.test?h("p",{class:"note"},"テスト受験（管理者）は順位に入りません。")
+        :me?h("p",{class:"rank-me"},"あなたは",h("b",{},String(me[0])),`位／${rows.length}人中`):h("p",{class:"note"},"順位を集計しています。"))));
+  if(rows.length) sec.append(h("table",{class:"rank"},h("thead",{},h("tr",{},h("th",{class:"n"},"順位"),h("th",{},"氏名"),h("th",{class:"n"},"点数"))),
+    h("tbody",{},rows.map(r=>h("tr",{class:r[3]===rec.id?"me":null},h("td",{class:"n"},r[0]+"位"),h("td",{},r[1]),h("td",{class:"n"},n1(r[2])))))));
+  if(S.rank.updated) sec.append(h("div",{class:"rank-upd"},"更新 "+new Date(S.rank.updated).toLocaleTimeString("ja-JP",{hour:"2-digit",minute:"2-digit"})+"（自動で更新されます）"));
+  return sec;
+}
+setInterval(async()=>{ if(!S.rec||!S.pw) return; const before=JSON.stringify(S.rank); await loadRank();
+  if(JSON.stringify(S.rank)!==before){ const old=$("#scoreSec"); if(old) old.replaceWith(scoreSection(S.rec)); } },12000);
 /* 設問は Q.questions（問1・問2…）。各設問の記入欄 parts をまとめて扱う */
 const allParts = () => Q.questions.flatMap(q=>q.parts);
 function updateProgress(){ const ps=allParts(), n=ps.filter(p=>len((S.draft.parts[p.key]||"").trim())>=10).length; $("#progWrap").hidden=false; $("#progBar").style.width=(n/ps.length*100)+"%";
@@ -209,12 +247,13 @@ function renderResult(v,rec){
     h("p",{class:"done-h"},rec.auto?"時間切れで提出しました":"提出しました"),
     h("p",{style:"margin:0;font-weight:700"},`${rec.name} さん　${new Date(rec.submittedAt).toLocaleString("ja-JP")}`),
     rec.test?h("div",{class:"banner warn"},"テスト受験です（スプシに「テスト」と付いて保存されます）。"):null,
-    rec.sent!==false?h("p",{class:"sentok"},"✓ 答案は送信されました。フィードバックはあとでお返しします。この画面は閉じて大丈夫です。"):null,
+    rec.sent!==false?h("p",{class:"sentok"},"✓ 答案は送信されました。点数と順位は、この下に出ます。"):null,
     h("div",{class:"noprint"},
       rec.sent===false?h("div",{class:"row",style:"margin-top:8px"},h("button",{class:"btn sm",onclick:async ev=>{const b=ev.currentTarget;b.disabled=true;b.textContent="送っています…";try{await sendToForm(rec);rec.sent=true;S.err="";try{if(!rec.test)localStorage.setItem(DKEY+"-rec",JSON.stringify(rec));}catch(x){}render();}catch(e){b.disabled=false;b.textContent="もう一度送る";}}},"もう一度送る")):null,
       h("div",{class:"row",style:"margin-top:10px"},h("button",{class:"btn ghost sm",onclick:()=>window.print()},"印刷／PDFに保存")),
       h("p",{class:"note",style:"margin:14px 0 0"},h("a",{href:"#",style:"color:var(--muted)",onclick:e=>{e.preventDefault(); if(!confirm("この端末に保存された答案を消して、表紙に戻ります。送信済みの答案は消えません。よろしいですか？")) return;
         try{ localStorage.removeItem(DKEY+"-rec"); localStorage.removeItem(DKEY); }catch(x){} S.rec=null; S.err=""; S.draft={name:"",startedAt:null,parts:{},test:PARAMS.get("test")==="1"}; render(); scrollTo(0,0);}},"この端末で別の人が受験する")))));
+  v.append(scoreSection(rec));
   if(Q) v.append(premiseBlock(), ...Q.questions.map(q=>questionSheet(q,"result",rec)));
   else { const sec=h("section",{class:"sheet"}); for(const [k,t] of Object.entries(rec.parts||{})) sec.append(h("div",{class:"field"},h("div",{class:"ans-text"},t||"（未記入）"))); v.append(sec); }
 }
@@ -235,6 +274,7 @@ function goHome(){
   }
   if(S.pw){ try{ Q=await decryptItems(S.pw); }catch(e){ Q=null; } }
   if(!S.draft.startedAt){ try{ const rec=JSON.parse(localStorage.getItem(DKEY+"-rec")||"null"); if(rec&&rec.submittedAt&&!rec.test) S.rec=rec; }catch(e){} }
+  if(S.rec) await loadRank();
   render();
   setInterval(async()=>{ try{ const c=await (await fetch("config.json?v="+Date.now())).json(); const was=CFG.closed; CFG={...CFG,...c};
     if(CFG.closed&&S.draft.startedAt&&Q&&!S.busy&&!S.rec){ S.err="管理者が受付を止めました。ここまでの内容で提出しました。"; submit(true); }
