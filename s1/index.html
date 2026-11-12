@@ -59,7 +59,7 @@ table.rank td.mv.down{color:var(--red)}
 /* ============ 設定（config.json）と問題（items.enc.json＝合言葉で復号） ============ */
 let CFG = {round:"",limitMin:10,closed:false,showKey:false,form:{postUrl:"",entryName:"",entryData:""}};
 let ITEMS = null;
-const BUILD = "1112 第4回 守破離 v2（10問・100点）";
+const BUILD = "1112 第4回 守破離 v3（提出後に順位）";
 /* 管理者（config.json の adminNames）が受験した場合はテスト受験＝順位に入れず、スプシの別タブに保存される */
 const isAdminName = n => { const v=String(n||"").normalize("NFKC").toLowerCase().replace(/[\s　（）()]/g,""); return !!v && (CFG.adminNames||[]).some(a=>String(a).normalize("NFKC").toLowerCase().replace(/[\s　（）()]/g,"")===v); };
 /* 管理者メール（config.json の adminEmails）は何回でも受けられる＝テスト受験（順位に入らない・合格済みチェックもしない） */
@@ -104,8 +104,8 @@ const b64u = { enc:s=>btoa(String.fromCharCode(...new TextEncoder().encode(s))).
                dec:s=>new TextDecoder().decode(Uint8Array.from(atob(s.replace(/-/g,"+").replace(/_/g,"/")),c=>c.charCodeAt(0))) };
 const fromB64 = s => Uint8Array.from(atob(s),c=>c.charCodeAt(0));
 async function decryptItems(pw){ return decryptFile("items.enc.json",pw); }
-async function decryptFile(name,pw){
-  const blob=await (await fetch(name+"?v="+Date.now())).json();
+async function decryptFile(name,pw){ return decryptBlob(await (await fetch(name+"?v="+Date.now())).json(),pw); }
+async function decryptBlob(blob,pw){
   const km=await crypto.subtle.importKey("raw",new TextEncoder().encode(pw),"PBKDF2",false,["deriveKey"]);
   const key=await crypto.subtle.deriveKey({name:"PBKDF2",salt:fromB64(blob.s),iterations:100000,hash:"SHA-256"},km,{name:"AES-GCM",length:256},false,["decrypt"]);
   const pt=await crypto.subtle.decrypt({name:"AES-GCM",iv:fromB64(blob.iv)},key,fromB64(blob.d));
@@ -301,6 +301,20 @@ async function pollMine(){
     return applyConfirmed();
   }catch(e){ return false; }
 }
+/* 提出直後の順位：GitHub Pages の反映（約1分）を待たずに、GitHub API から rank.enc.json を5秒ごとに直接読む。
+   自分の名前が順位表に出たら止める（5分まで）。API の回数制限（403/429）に当たったら、20秒ごとの通常の読み直しに任せる */
+const GH_RANK="https://api.github.com/repos/kazuhiramorimoto-source/herozz-mg-test/contents/s1/rank.enc.json";
+async function pollRankFast(){
+  const rec=S.rec; if(!rec||rec.test||!S.pw||S.rankStop) return;
+  const rows=(S.rank&&S.rank.rows)||[]; if(rows.some(r=>sameName(r[1],rec.name))) return;
+  if(Date.now()-Date.parse(rec.submittedAt)>5*60000) return;
+  try{ const r=await fetch(GH_RANK+"?t="+Date.now(),{headers:{Accept:"application/vnd.github.raw"},cache:"no-store"});
+    if(r.status===403||r.status===429){ S.rankStop=true; return; } if(!r.ok) return;
+    const before=JSON.stringify(S.rank); S.rank=await decryptBlob(await r.json(),S.pw);
+    if(JSON.stringify(S.rank)!==before){ const old=$("#rankSec"); if(old) old.replaceWith(rankSection(S.rec)); }
+  }catch(e){}
+}
+setInterval(pollRankFast,5000);
 setInterval(async()=>{ if(await pollMine()){ S.confirmedNow=false; const y=scrollY; render(); scrollTo(0,y); loadRank(); } },4000);
 /* スプシ側（Macの自動採点）で確定した記述の点と講評を、自分の答案に反映する */
 function applyConfirmed(){
@@ -326,7 +340,7 @@ function rankSection(rec){
   const head=rec.test?h("p",{class:"note"},"テスト受験（管理者）は順位に入りません。")
     :late?h("p",{class:"note"},"追試（後日受験）のため、順位には入りません。")
     :me?h("p",{class:"rank-me"},"あなたは",h("b",{},me[0]),`位／${rows.length}人中`)
-    :h("p",{class:"note"},"集計中です。1〜2分で順位に反映されます（この画面は自動で更新されます）。");
+    :h("p",{class:"note"},"集計中です。30秒〜1分ほどで、ここにあなたの順位が出ます（この画面は自動で更新されます）。");
   return h("section",{class:"sheet",id:"rankSec"},h("h2",{class:"part"},h("span",{class:"bigq"},"順位"),h("span",{class:"pts"},"（本試験）")),
     head,rows.length?rankTable(rec.test||late?null:rec.name):null,S.rank&&S.rank.updated?h("div",{class:"rank-upd"},"更新 "+new Date(S.rank.updated).toLocaleTimeString("ja-JP",{hour:"2-digit",minute:"2-digit"})):null);
 }
