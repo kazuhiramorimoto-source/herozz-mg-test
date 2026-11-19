@@ -1,0 +1,274 @@
+<!doctype html>
+<html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>HERO'ZZ 守破離 宿題シート</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=BIZ+UDPGothic:wght@400;700&family=Yomogi&family=Shippori+Mincho:wght@600;800&family=Roboto+Mono:wght@500;700&display=swap">
+<link rel="stylesheet" href="../style.css">
+<style>
+.nw{display:inline-block;white-space:nowrap}
+.cover .theme{font-family:var(--serif);font-weight:700;font-size:16px;letter-spacing:.1em;margin:8px 0 2px;line-height:1.7}
+.cover table.spec{width:100%;max-width:640px}
+.cover table.spec td:first-child{width:7em}
+.formbox{max-width:640px;margin:20px auto 0;border:1.5px solid var(--ink);text-align:left}
+.frow{display:grid;grid-template-columns:10em minmax(0,1fr)}
+.frow+.frow{border-top:1px solid var(--ink)}
+.frow label{display:flex;align-items:center;justify-content:center;padding:10px 8px;font-weight:700;font-family:var(--serif);background:var(--fill);border-right:1.5px solid var(--ink);white-space:nowrap;letter-spacing:0}
+.frow input{width:100%;min-width:0;border:0;border-radius:0;font-size:17px;padding:10px 14px;background:var(--paper);font-family:var(--sans)}
+@media (max-width:480px){.frow{grid-template-columns:8.5em minmax(0,1fr)}.frow label{font-size:13px;padding:10px 4px}}
+.task{font-family:var(--serif);font-weight:700;font-size:18px;line-height:1.8;margin:14px 0 0}
+/* 診断 */
+.dq{display:grid;grid-template-columns:2.4em minmax(0,1fr);gap:4px 12px;align-items:start;padding:14px 0;border-top:1px dashed var(--ink)}
+.dq:first-of-type{border-top:0}
+.dq .no{font-family:var(--mono);font-weight:700;font-size:15px;border:1.5px solid var(--ink);text-align:center;padding:2px 0}
+.dq .s{font-size:16.5px;line-height:1.75;font-weight:700}
+.dq .s small{display:block;font-weight:400;font-size:14px;color:var(--muted);margin-top:2px}
+.yn{grid-column:2;display:flex;gap:10px;margin-top:8px}
+.yn button{flex:0 0 auto;min-width:7em;padding:8px 16px;font-size:16px;font-weight:700;border:1.5px solid var(--ink);background:var(--paper);color:var(--ink);cursor:pointer;font-family:var(--sans)}
+.yn button[aria-pressed="true"]{background:var(--ink);color:var(--paper)}
+.diag{margin:16px 0 0;border:2px solid var(--red);padding:14px 16px}
+.diag .p{font-family:var(--serif);font-weight:800;font-size:22px}
+.diag .p b{font-family:var(--pen);color:var(--red);font-size:40px;margin:0 6px}
+.diag .d{font-size:15.5px;line-height:1.7;margin-top:4px}
+.next{margin:12px 0 0;border:1.5px solid var(--ink);background:var(--fill);padding:12px 16px}
+.next .h{font-family:var(--serif);font-weight:800;font-size:15px;letter-spacing:.1em;border-bottom:1px solid var(--ink);padding-bottom:4px;margin-bottom:6px}
+.next .ft{font-size:17px;font-weight:700;line-height:1.7}
+.next .how{font-size:15px;line-height:1.75;margin-top:4px}
+select#ph{font-size:17px;padding:8px 12px;margin-top:10px;min-width:16em;max-width:100%}
+/* 記述 */
+.field{margin:18px 0 0}
+.field-h{display:flex;gap:12px;align-items:baseline;flex-wrap:wrap}
+.field-h .guide{font-size:14.5px;line-height:1.7;flex:1 1 18em;min-width:0;font-family:var(--sans)}
+.field textarea{display:block;width:100%;min-height:150px;margin-top:8px;font-size:16px;line-height:28px;background-origin:content-box;background-clip:content-box;background-attachment:local}
+.ex{font-size:14px;color:var(--muted);margin-top:6px;line-height:1.7}
+/* アンケート */
+.sat{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin-top:10px}
+.sat label{display:flex;flex-direction:column;align-items:center;gap:4px;border:1.5px solid var(--ink);padding:10px 4px;cursor:pointer;font-weight:700;font-size:14px;text-align:center;line-height:1.4}
+.sat label b{font-family:var(--mono);font-size:22px}
+.sat input{position:absolute;opacity:0;pointer-events:none}
+.sat label:has(input:checked){background:var(--ink);color:var(--paper)}
+.sat label:has(input:focus-visible){outline:3px solid var(--red);outline-offset:2px}
+@media (max-width:480px){.sat{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.opt-l{font-size:14px;color:var(--muted);font-weight:400;margin-left:6px}
+.done-h{font-family:var(--serif);font-weight:800;font-size:24px;margin:0 0 6px;letter-spacing:.1em}
+.sentok{display:flex;gap:8px;align-items:center;font-weight:700;color:var(--ok);margin:10px 0 0}
+.mine{margin:14px 0 0;border:1.5px solid var(--ink);padding:12px 16px;white-space:pre-wrap;font-size:16px;line-height:1.8}
+.miss{color:var(--red);font-weight:700;font-size:14.5px;margin:10px 0 0}
+</style>
+</head><body>
+<div class="wrap">
+  <div class="bar-top">
+    <div class="strip">
+      <div class="meta"><span><b id="kai"></b></span><span>目安 <b>7</b>分</span></div>
+      <div class="timer" id="timer" style="font-size:15px"><small>宿題</small>守破離</div>
+    </div>
+    <div class="progress" id="progWrap"><i id="progBar"></i></div>
+  </div>
+  <div id="banner"></div>
+  <main id="view"></main>
+</div>
+
+<script>
+/* 公開講義「守破離」（11/19）の宿題＝最後のワーク。
+   フェーズ診断（はい・いいえ）→今のフェーズ→克服すること→アクション→アンケート を1枚で書いて送る。
+   送信はGoogleフォーム（round:"w1"）→ GASが集計スプシ「守破離 宿題 回答一覧」に1人1行で書く。点数・順位はない。 */
+let CFG = {round:"2026年11月19日　公開講義「守破離」",closed:false,form:{postUrl:"",entryName:"",entryData:""},adminNames:[]};
+const BUILD = "2026-11-19 守破離 宿題 v1";
+const PARAMS = new URLSearchParams(location.search);
+const normName = n => String(n||"").normalize("NFKC").toLowerCase().replace(/[\s　（）()]/g,"");
+const isAdminName = n => { const v=normName(n); return !!v && (CFG.adminNames||[]).some(a=>normName(a)===v); };
+
+/* フェーズの定義と、次に上がるポイント（講義スライドと同じ言葉） */
+const PH = {
+  "1":  {dan:"守", def:"模倣している。まだバズっていない", from:"真似したつもり", to:"まるっきり同じ",
+         how:"お手本を編集画面の右下に貼って見比べ、1秒目・テロップ・カット・台本の4つのズレをなくす。"},
+  "1.5":{dan:"守", def:"模倣してバズった。でも、理由は言えない", from:"なぜか伸びた", to:"○○だから伸びた",
+         how:"理由を言う前に、まず数字を見る。冒頭3秒の維持率・平均視聴時間・フル視聴率。"},
+  "2":  {dan:"破", def:"自分のジャンルなら、理由を言葉にできる", from:"ジャンルの言葉", to:"欲求の言葉",
+         how:"伸びた理由を、誰の、どんな悩みを解決したかで言う。自分のジャンル以外の動画でも言ってみる。"},
+  "2.5":{dan:"破", def:"自分のジャンル以外も、理由を言葉にできる", from:"言える", to:"作れる",
+         how:"ほかのジャンルで伸びている型を、自分のジャンルに持ってきて掛け合わせる。"},
+  "3":  {dan:"破", def:"伸びる要素を掛け合わせて、バズる", from:"1回当たる", to:"狙って当てる",
+         how:"伸びる理由から逆に企画を組み、どのジャンルでもくり返せるようにする。"},
+  "4":  {dan:"離", def:"オールジャンルで、再現性を持ってバズらせられる", from:"再生数", to:"目的の数字",
+         how:"問い合わせ・LINE登録・予約・売上・採用といった目的の数字で、投稿の良し悪しを見る。"},
+  "5":  {dan:"離", def:"オールジャンルで、目的に直結するバズを生み出せる", from:null, to:null,
+         how:"目的の数字を、狙って動かし続ける。"}
+};
+const ORDER = ["1","1.5","2","2.5","3","4","5"];
+/* 診断：上から順に「はい」なら次へ、「いいえ」が出たところが今のフェーズ */
+const DQ = [
+  {s:"バズの基準を超えた動画がある", sub:"再生数がフォロワーの4倍以上、かつ10万再生以上", no:"1"},
+  {s:"伸びた理由と伸びなかった理由を、数字を見て言える", sub:"自分のジャンルの動画で", no:"1.5"},
+  {s:"自分のジャンル以外の動画でも、伸びた理由を言える", sub:"誰の、どんな悩みを解決したか", no:"2"},
+  {s:"ほかのジャンルの型を掛け合わせて、バズを出せた", sub:"", no:"2.5"},
+  {s:"どのジャンルでも、狙って伸ばせる", sub:"1回ではなく、くり返し", no:"3"},
+  {s:"問い合わせ・売上・採用など、目的の数字が動いた", sub:"再生数ではなく", no:"4"}
+];
+
+const $ = (s, el=document) => el.querySelector(s);
+const h = (tag, attrs={}, ...kids) => {
+  const el = document.createElement(tag);
+  for (const [k,v] of Object.entries(attrs)) { if (v == null || v === false) continue; if (k === "class") el.className = v; else if (k.startsWith("on")) el.addEventListener(k.slice(2), v); else el.setAttribute(k, v === true ? "" : v); }
+  for (const c of kids.flat()) if (c != null && c !== false) el.append(c.nodeType ? c : document.createTextNode(String(c)));
+  return el;
+};
+const len = s => [...(s||"")].length;
+
+/* 状態（この端末だけ・書きかけは自動保存） */
+const DKEY = "herozz-shuhari-w1";
+const blank = () => ({name:"",mgr:"",yn:[],phase:"",kokufuku:"",action:"",sat:"",satWhy:"",question:""});
+const S = { d:blank(), rec:null, busy:false, err:"", tried:false };
+function load(){ try{ const d=JSON.parse(localStorage.getItem(DKEY)||"null"); if(d) S.d={...S.d,...d}; const r=JSON.parse(localStorage.getItem(DKEY+"-rec")||"null"); if(r) S.rec=r; }catch(e){} }
+let sT; function save(){ clearTimeout(sT); sT=setTimeout(()=>{ try{ localStorage.setItem(DKEY,JSON.stringify(S.d)); }catch(e){} },200); }
+
+function diagPhase(){ for(let i=0;i<DQ.length;i++){ const a=S.d.yn[i]; if(a==null) return null; if(a===false) return DQ[i].no; } return "5"; }
+function missing(){
+  const m=[]; if(!S.d.name.trim()) m.push("氏名"); if(!S.d.mgr.trim()) m.push("担当マネージャー");
+  if(!S.d.phase) m.push("問2 今のフェーズ"); if(len(S.d.kokufuku.trim())<5) m.push("問3 克服すること"); if(len(S.d.action.trim())<5) m.push("問4 アクション");
+  if(!S.d.sat) m.push("アンケート 満足度"); return m;
+}
+function progress(){ const total=6, n=total-missing().length; const b=$("#progBar"); if(b) b.style.width=(n/total*100)+"%"; }
+
+function render(){
+  $("#kai").textContent=CFG.round;
+  const b=$("#banner"); b.replaceChildren(); if(S.err) b.append(h("div",{class:"banner err"},S.err));
+  const v=$("#view"); v.replaceChildren();
+  if(S.rec){ $("#progWrap").hidden=true; return renderDone(v,S.rec); }
+  $("#progWrap").hidden=false;
+  v.append(cover(), diagSheet(), phaseSheet(), writeSheet(), surveySheet(), submitSheet()); progress();
+}
+function cover(){
+  return h("section",{class:"sheet cover"},
+    h("div",{class:"kai"},CFG.round),
+    h("h1",{},h("span",{class:"nw"},"今日の"),h("span",{class:"nw"},"宿題")),
+    h("div",{class:"theme"},"今の自分のフェーズと、次に上がるためにやることを、言葉にする"),
+    h("table",{class:"spec"},h("tbody",{},
+      h("tr",{},h("td",{},"時間"),h("td",{},"目安7分")),
+      h("tr",{},h("td",{},"問1"),h("td",{},"フェーズ診断（はい・いいえで6問）")),
+      h("tr",{},h("td",{},"問2"),h("td",{},"今の自分のフェーズ")),
+      h("tr",{},h("td",{},"問3"),h("td",{},"次に上がるために、克服すること")),
+      h("tr",{},h("td",{},"問4"),h("td",{},"そのために、やるアクション")),
+      h("tr",{},h("td",{},"最後"),h("td",{},"今日の講義のアンケート")),
+      h("tr",{},h("td",{},"点数"),h("td",{},"ありません。正直に書いてください")))),
+    h("div",{class:"formbox"},
+      h("div",{class:"frow"},h("label",{for:"nm"},"氏名"),
+        h("input",{type:"text",id:"nm",value:S.d.name,autocomplete:"name",placeholder:"お名前（例：山田花子）",oninput:e=>{S.d.name=e.target.value;save();progress();}})),
+      h("div",{class:"frow"},h("label",{for:"mg"},"担当マネージャー"),
+        h("input",{type:"text",id:"mg",value:S.d.mgr,autocomplete:"off",placeholder:"担当マネージャーの名前",oninput:e=>{S.d.mgr=e.target.value;save();progress();}}))),
+    CFG.closed?h("div",{class:"banner err",style:"max-width:640px;margin:20px auto 0"},"この宿題の受付は終了しました。"):null,
+    h("div",{class:"note",style:"text-align:right;margin-top:14px;font-size:11px"},"版 "+BUILD));
+}
+function diagSheet(){
+  const sec=h("section",{class:"sheet"},h("h2",{class:"part"},h("span",{class:"bigq"},"問1"),h("span",{class:"pts"},"フェーズ診断")),
+    h("p",{class:"task"},"上から順に、「はい」か「いいえ」で答えてください。「いいえ」が出たところで終わりです。"));
+  const box=h("div",{});
+  for(let i=0;i<DQ.length;i++){
+    if(i>0 && S.d.yn[i-1]!==true) break;
+    const q=DQ[i], a=S.d.yn[i];
+    box.append(h("div",{class:"dq"},h("div",{class:"no"},i+1),h("div",{class:"s"},q.s,q.sub?h("small",{},q.sub):null),
+      h("div",{class:"yn"},
+        h("button",{type:"button","aria-pressed":a===true?"true":"false",onclick:()=>answer(i,true)},"はい"),
+        h("button",{type:"button","aria-pressed":a===false?"true":"false",onclick:()=>answer(i,false)},"いいえ"))));
+  }
+  sec.append(box);
+  const p=diagPhase();
+  if(p){ const x=PH[p]; sec.append(h("div",{class:"diag"},h("div",{class:"p"},"診断：フェーズ",h("b",{},p),`（${x.dan}）`),h("div",{class:"d"},x.def))); }
+  return sec;
+}
+function answer(i,val){
+  const before=diagPhase();
+  S.d.yn=S.d.yn.slice(0,i); S.d.yn[i]=val;
+  const p=diagPhase(); if(p && (!S.d.phase || S.d.phase===before)) S.d.phase=p;
+  save(); const y=scrollY; render(); scrollTo(0,y);
+}
+function phaseSheet(){
+  const p=S.d.phase, x=p?PH[p]:null;
+  const sel=h("select",{id:"ph",onchange:e=>{S.d.phase=e.target.value;save();const y=scrollY;render();scrollTo(0,y);}},
+    h("option",{value:""},"選んでください"),
+    ORDER.map(k=>h("option",{value:k,selected:k===p},`フェーズ${k}（${PH[k].dan}）　${PH[k].def}`)));
+  return h("section",{class:"sheet"},h("h2",{class:"part"},h("span",{class:"bigq"},"問2"),h("span",{class:"pts"},"今の自分のフェーズ")),
+    h("p",{class:"task"},"診断の結果を見て、今の自分のフェーズを選んでください。違うと思えば変えてOKです。"),
+    sel,
+    x?h("div",{class:"next"},h("div",{class:"h"},x.from?`次に上がるポイント（${p}→${ORDER[ORDER.indexOf(p)+1]}）`:"フェーズ5"),
+      x.from?h("div",{class:"ft"},`「${x.from}」から「${x.to}」へ`):null,
+      h("div",{class:"how"},x.how)):null);
+}
+function ta(key,max,ph){
+  const c=h("div",{class:"count"});
+  const t=h("textarea",{maxlength:String(max),placeholder:ph,oninput:e=>{S.d[key]=e.target.value;paint();save();progress();}},S.d[key]||"");
+  const paint=()=>{const n=len(t.value);c.textContent=`${n} / ${max}字`;c.classList.toggle("over",n>max)}; paint();
+  return [t,c];
+}
+function writeSheet(){
+  return h("section",{class:"sheet"},
+    h("h2",{class:"part"},h("span",{class:"bigq"},"問3"),h("span",{class:"pts"},"次に上がるために、克服すること")),
+    h("div",{class:"field"},h("div",{class:"field-h"},h("span",{class:"guide"},"今のフェーズから上がれていない理由は何か。上の「次に上がるポイント」を、自分の場合に置きかえて書いてください。")),
+      ...ta("kokufuku",200,"例：お手本と並べると、1秒目とテロップの大きさがずれている"),
+      h("div",{class:"ex"},"箇条書きでもOK")),
+    h("h2",{class:"part",style:"margin-top:28px"},h("span",{class:"bigq"},"問4"),h("span",{class:"pts"},"そのために、やるアクション")),
+    h("div",{class:"field"},h("div",{class:"field-h"},h("span",{class:"guide"},"いつまでに、何を、何本やるか。")),
+      ...ta("action",200,"例：今週の日曜までに、お手本を編集画面の右下に貼って、3本作り直す")));
+}
+function surveySheet(){
+  const opts=[["4","とても良かった"],["3","良かった"],["2","あまり良くなかった"],["1","良くなかった"]];
+  const [t1,c1]=ta("satWhy",300,"よかったところ・分かりにくかったところ");
+  const [t2,c2]=ta("question",300,"今日の内容で聞きたいこと（質問タイムで答えます）");
+  t1.style.minHeight=t2.style.minHeight="100px";
+  return h("section",{class:"sheet"},h("h2",{class:"part"},h("span",{class:"bigq"},"アンケート"),h("span",{class:"pts"},"今日の講義について")),
+    h("p",{class:"task"},"今日の講義は、どうでしたか？"),
+    h("div",{class:"sat",role:"radiogroup"},opts.map(([v,l])=>h("label",{},h("input",{type:"radio",name:"sat",value:v,checked:S.d.sat===v,onchange:()=>{S.d.sat=v;save();progress();}}),h("b",{},v),l))),
+    h("div",{class:"field"},h("div",{class:"field-h"},h("span",{class:"guide"},"そう思った理由",h("span",{class:"opt-l"},"（任意）"))),t1,c1),
+    h("div",{class:"field"},h("div",{class:"field-h"},h("span",{class:"guide"},"質問したいこと",h("span",{class:"opt-l"},"（任意）"))),t2,c2));
+}
+function submitSheet(){
+  const m=missing();
+  return h("section",{class:"sheet center noprint"},
+    S.tried&&m.length?h("p",{class:"miss"},"まだ書いていないところ：",m.join("・")):null,
+    h("button",{class:"btn red",disabled:S.busy||CFG.closed,onclick:submit},S.busy?"送っています…":"宿題を提出する"));
+}
+
+/* 送信：Googleフォーム（ログイン不要） */
+async function sendToForm(rec){
+  if(!CFG.form.postUrl) throw new Error("送信先が未設定");
+  const fd=new FormData(); fd.append(CFG.form.entryName,rec.name);
+  fd.append(CFG.form.entryData,JSON.stringify({round:"w1",...rec}));
+  await fetch(CFG.form.postUrl,{method:"POST",mode:"no-cors",body:fd});
+}
+async function submit(){
+  if(S.busy) return;
+  S.tried=true; if(missing().length){ render(); const el=$(".miss"); if(el) el.scrollIntoView({block:"center"}); return; }
+  S.busy=true; render();
+  const d=S.d, cut=(s,n)=>[...(s||"")].slice(0,n).join("").trim();
+  const rec={id:Math.random().toString(36).slice(2,12),name:cut(d.name,40),mgr:cut(d.mgr,40),submittedAt:new Date().toISOString(),
+    diag:diagPhase()||"",yn:d.yn,phase:d.phase,kokufuku:cut(d.kokufuku,200),action:cut(d.action,200),sat:d.sat,satWhy:cut(d.satWhy,300),question:cut(d.question,300),
+    test:PARAMS.get("test")==="1"||isAdminName(d.name)};
+  let sent=true; try{ await sendToForm(rec); }catch(e){ sent=false; }
+  rec.sent=sent; S.rec=rec;
+  try{ localStorage.setItem(DKEY+"-rec",JSON.stringify(rec)); localStorage.removeItem(DKEY); }catch(e){}
+  S.busy=false; S.err=sent?"":"送信に失敗しました。電波を確認して「もう一度送る」を押してください。"; render(); scrollTo(0,0);
+}
+function mineText(r){
+  const x=PH[r.phase]||{};
+  return `【守破離 宿題】${r.name}\n今のフェーズ：${r.phase}（${x.dan||""}）\n克服すること：${r.kokufuku}\nアクション：${r.action}`;
+}
+function renderDone(v,r){
+  const txt=mineText(r);
+  v.append(h("section",{class:"sheet"},
+    h("p",{class:"done-h"},"提出しました"),
+    h("p",{style:"margin:0;font-weight:700"},`${r.name} さん　${new Date(r.submittedAt).toLocaleString("ja-JP")}`),
+    r.test?h("div",{class:"banner warn"},"テスト送信です（集計では「テスト」と付きます）。"):null,
+    r.sent!==false?h("p",{class:"sentok"},"✓ 宿題は送信されました。"):h("div",{class:"row",style:"margin-top:8px"},h("button",{class:"btn sm",onclick:async ev=>{const b=ev.currentTarget;b.disabled=true;b.textContent="送っています…";try{await sendToForm(r);r.sent=true;S.err="";try{localStorage.setItem(DKEY+"-rec",JSON.stringify(r));}catch(x){}render();}catch(e){b.disabled=false;b.textContent="もう一度送る";}}},"もう一度送る")),
+    h("p",{class:"task"},"最後に、今書いたことを担当マネージャーに伝えてください。伝えるまでが、宿題です。"),
+    h("div",{class:"mine"},txt),
+    h("div",{class:"row noprint",style:"margin-top:12px"},h("button",{class:"btn",onclick:async ev=>{const b=ev.currentTarget;try{await navigator.clipboard.writeText(txt);b.textContent="コピーしました";}catch(e){b.textContent="長押しでコピーしてください";}}},"マネージャーに送る文をコピー")),
+    h("p",{class:"note noprint",style:"margin:18px 0 0"},h("a",{href:"#",style:"color:var(--muted)",onclick:e=>{e.preventDefault(); if(!confirm("この端末の記録を消して、最初の画面に戻ります。送信済みの宿題は消えません。よろしいですか？")) return;
+      try{ localStorage.removeItem(DKEY+"-rec"); localStorage.removeItem(DKEY); }catch(x){} S.rec=null; S.err=""; S.tried=false; S.d=blank(); render(); scrollTo(0,0);}},"この端末で別の人が書く"))));
+}
+
+(async()=>{
+  load();
+  try{ CFG={...CFG,...(await (await fetch("config.json?v="+Date.now())).json())}; }catch(e){}
+  render();
+})();
+</script>
+</body></html>
