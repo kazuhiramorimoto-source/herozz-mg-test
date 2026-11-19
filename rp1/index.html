@@ -64,10 +64,10 @@
 
 <script>
 /* マネージャー公開講義（11/19）のロープレ回答シート。
-   1人の生徒のアカウントを見て、目的と今月の目標→問題→課題→対策→生徒への最初の一言 を書いて送る。
+   1人の生徒のアカウントを見て、目的の推測とSNSの方向性→問題→課題→対策 を書いて送る。
    送信はGoogleフォーム（round:"rp1"）→ GASが問題管理スプシ「ロープレ 回答一覧」に1人1行で書く。点数・順位はない。 */
 let CFG = {round:"2026年11月19日　マネージャー公開講義 ロープレ",closed:false,form:{postUrl:"",entryName:"",entryData:""},adminNames:[]};
-const BUILD = "2026-11-19 ロープレ v3";
+const BUILD = "2026-11-19 ロープレ v4";
 const PARAMS = new URLSearchParams(location.search);
 const normName = n => String(n||"").normalize("NFKC").toLowerCase().replace(/[\s　（）()]/g,"");
 const isAdminName = n => { const v=normName(n); return !!v && (CFG.adminNames||[]).some(a=>normName(a)===v); };
@@ -77,8 +77,7 @@ const Q = [
   {k:"mokuteki", t:"目的の推測と、SNSの方向性", g:"① 生徒がSNSで最終的に何を動かしたいのか、目的を推測する。② その目的に向けて、SNSをざっくりどの方向に進めていくべきかを書く。", ph:"例：目的は〇〇だと思う。そのために、SNSは〇〇の方向に進めていく"},
   {k:"mondai",   t:"問題", g:"目標に届いていないこと。数字で書く。", ph:"例：再生数が〇月の〇回から〇回に下がっている"},
   {k:"kadai",    t:"課題", g:"どこで、なぜ止まっているかまで特定する。「再生数が伸びない」は問題で、課題ではない。", ph:"例：冒頭3秒で離脱している。理由は〇〇"},
-  {k:"taisaku",  t:"対策", g:"課題に対して、次の1本で何を変えるか。", ph:"例：次の動画は、冒頭の1文を〇〇に変える"},
-  {k:"hitokoto", t:"生徒への最初の一言", g:"面談で、最初に生徒に何と言うか。そのまま話す言葉で書く。", ph:"例：〇〇さん、今日はまず〇〇から確認させてください"}
+  {k:"taisaku",  t:"対策", g:"課題に対して、次の1本で何を変えるか。", ph:"例：次の動画は、冒頭の1文を〇〇に変える"}
 ];
 const MAX = 300;
 
@@ -93,7 +92,7 @@ const len = s => [...(s||"")].length;
 
 /* 状態（この端末だけ・書きかけは自動保存） */
 const DKEY = "herozz-roleplay-rp1";
-const blank = () => ({name:"",mokuteki:"",mondai:"",kadai:"",taisaku:"",hitokoto:""});
+const blank = () => ({name:"",mokuteki:"",mondai:"",kadai:"",taisaku:""});
 const S = { d:blank(), rec:null, busy:false, err:"", tried:false };
 function load(){ try{ const d=JSON.parse(localStorage.getItem(DKEY)||"null"); if(d) S.d={...S.d,...d}; const r=JSON.parse(localStorage.getItem(DKEY+"-rec")||"null"); if(r) S.rec=r; }catch(e){} }
 let sT; function save(){ clearTimeout(sT); sT=setTimeout(()=>{ try{ localStorage.setItem(DKEY,JSON.stringify(S.d)); }catch(e){} },200); }
@@ -140,6 +139,7 @@ function accountSheet(){
       h("dt",{},"ジャンル"),h("dd",{},"ホスト／配信"),
       h("dt",{},"目的（本人）"),h("dd",{},"フォロワー増加／認知拡大／ホストでの集客"),
       h("dt",{},"悩み（本人）"),h("dd",{},"再生数が回らない、フォロワーが増えない"),
+      h("dt",{},"今の状況"),h("dd",{},"SNSを始めたが、集客につながっていないことに不満がある。費用対効果が合っていない。SNSから集まったお客さんは、まだ1〜2人"),
       h("dt",{},"フォロワー"),h("dd",{},"TikTok 2,704人／Instagram 2,594人（11/19）"),
       h("dt",{},"アカウント"),h("dd",{},
         h("a",{href:"https://www.tiktok.com/@hiragi_yuta",target:"_blank",rel:"noopener"},"TikTok"),"　",
