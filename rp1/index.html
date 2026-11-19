@@ -67,7 +67,7 @@
    1人の生徒のアカウントを見て、目的の推測とSNSの方向性→問題→課題→対策 を書いて送る。
    送信はGoogleフォーム（round:"rp1"）→ GASが問題管理スプシ「ロープレ 回答一覧」に1人1行で書く。点数・順位はない。 */
 let CFG = {round:"2026年11月19日　マネージャー公開講義 ロープレ",closed:false,form:{postUrl:"",entryName:"",entryData:""},adminNames:[]};
-const BUILD = "2026-11-19 ロープレ v4";
+const BUILD = "2026-11-19 ロープレ v5";
 const PARAMS = new URLSearchParams(location.search);
 const normName = n => String(n||"").normalize("NFKC").toLowerCase().replace(/[\s　（）()]/g,"");
 const isAdminName = n => { const v=normName(n); return !!v && (CFG.adminNames||[]).some(a=>normName(a)===v); };
@@ -135,6 +135,7 @@ function accountSheet(){
   return h("section",{class:"sheet"},
     h("h2",{class:"part"},h("span",{class:"bigq"},"今日のアカウント"),h("span",{class:"pts"},"柊 悠詩さん")),
     h("div",{class:"acc"},h("dl",{},
+      h("dt",{},"入学日"),h("dd",{},"11月7日（今日で入学12日目）"),
       h("dt",{},"仕事"),h("dd",{},"フリーランスエンジニア／ホスト"),
       h("dt",{},"ジャンル"),h("dd",{},"ホスト／配信"),
       h("dt",{},"目的（本人）"),h("dd",{},"フォロワー増加／認知拡大／ホストでの集客"),
