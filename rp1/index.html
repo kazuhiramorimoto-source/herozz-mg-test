@@ -53,7 +53,7 @@
 <div class="wrap">
   <div class="bar-top">
     <div class="strip">
-      <div class="meta"><span><b id="kai"></b></span><span>目安 <b>7</b>分</span></div>
+      <div class="meta"><span><b id="kai"></b></span><span>目安 <b>12</b>分</span></div>
       <div class="timer" id="timer" style="font-size:15px"><small>回答</small>ロープレ</div>
     </div>
     <div class="progress" id="progWrap"><i id="progBar"></i></div>
@@ -67,14 +67,14 @@
    1人の生徒のアカウントを見て、目的と今月の目標→問題→課題→対策→生徒への最初の一言 を書いて送る。
    送信はGoogleフォーム（round:"rp1"）→ GASが問題管理スプシ「ロープレ 回答一覧」に1人1行で書く。点数・順位はない。 */
 let CFG = {round:"2026年11月19日　マネージャー公開講義 ロープレ",closed:false,form:{postUrl:"",entryName:"",entryData:""},adminNames:[]};
-const BUILD = "2026-11-19 ロープレ v2";
+const BUILD = "2026-11-19 ロープレ v3";
 const PARAMS = new URLSearchParams(location.search);
 const normName = n => String(n||"").normalize("NFKC").toLowerCase().replace(/[\s　（）()]/g,"");
 const isAdminName = n => { const v=normName(n); return !!v && (CFG.adminNames||[]).some(a=>normName(a)===v); };
 
 /* 書く欄（講義の型と同じ言葉） */
 const Q = [
-  {k:"mokuteki", t:"生徒の目的と、今月の目標", g:"生徒がSNSで最終的に何を動かしたいか。今月の目標が分からないなら「分からない」と書き、何を聞くかを書く。", ph:"例：目的は〇〇。今月の目標は分からないので、最初に〇〇を聞く"},
+  {k:"mokuteki", t:"目的の推測と、SNSの方向性", g:"① 生徒がSNSで最終的に何を動かしたいのか、目的を推測する。② その目的に向けて、SNSをざっくりどの方向に進めていくべきかを書く。", ph:"例：目的は〇〇だと思う。そのために、SNSは〇〇の方向に進めていく"},
   {k:"mondai",   t:"問題", g:"目標に届いていないこと。数字で書く。", ph:"例：再生数が〇月の〇回から〇回に下がっている"},
   {k:"kadai",    t:"課題", g:"どこで、なぜ止まっているかまで特定する。「再生数が伸びない」は問題で、課題ではない。", ph:"例：冒頭3秒で離脱している。理由は〇〇"},
   {k:"taisaku",  t:"対策", g:"課題に対して、次の1本で何を変えるか。", ph:"例：次の動画は、冒頭の1文を〇〇に変える"},
@@ -119,7 +119,7 @@ function cover(){
     h("h1",{},h("span",{class:"nw"},"ロープレ"),h("span",{class:"nw"},"回答シート")),
     h("div",{class:"theme"},"1人の生徒のアカウントを見て、問題・課題・対策を出す"),
     h("table",{class:"spec"},h("tbody",{},
-      h("tr",{},h("td",{},"時間"),h("td",{},"目安7分")),
+      h("tr",{},h("td",{},"時間"),h("td",{},"目安12分")),
       ...Q.map((q,i)=>h("tr",{},h("td",{},"問"+(i+1)),h("td",{},q.t))),
       h("tr",{},h("td",{},"点数"),h("td",{},"ありません。他の人の答えは見ずに、自分の考えで書いてください")))),
     h("div",{class:"formbox"},
