@@ -40,14 +40,6 @@ select#ph{font-size:17px;padding:8px 12px;margin-top:10px;min-width:16em;max-wid
 .field-h .guide{font-size:14.5px;line-height:1.7;flex:1 1 18em;min-width:0;font-family:var(--sans)}
 .field textarea{display:block;width:100%;min-height:150px;margin-top:8px;font-size:16px;line-height:28px;background-origin:content-box;background-clip:content-box;background-attachment:local}
 .ex{font-size:14px;color:var(--muted);margin-top:6px;line-height:1.7}
-/* アンケート */
-.sat{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin-top:10px}
-.sat label{display:flex;flex-direction:column;align-items:center;gap:4px;border:1.5px solid var(--ink);padding:10px 4px;cursor:pointer;font-weight:700;font-size:14px;text-align:center;line-height:1.4}
-.sat label b{font-family:var(--mono);font-size:22px}
-.sat input{position:absolute;opacity:0;pointer-events:none}
-.sat label:has(input:checked){background:var(--ink);color:var(--paper)}
-.sat label:has(input:focus-visible){outline:3px solid var(--red);outline-offset:2px}
-@media (max-width:480px){.sat{grid-template-columns:repeat(2,minmax(0,1fr))}}
 .opt-l{font-size:14px;color:var(--muted);font-weight:400;margin-left:6px}
 .done-h{font-family:var(--serif);font-weight:800;font-size:24px;margin:0 0 6px;letter-spacing:.1em}
 .sentok{display:flex;gap:8px;align-items:center;font-weight:700;color:var(--ok);margin:10px 0 0}
@@ -69,10 +61,10 @@ select#ph{font-size:17px;padding:8px 12px;margin-top:10px;min-width:16em;max-wid
 
 <script>
 /* 公開講義「守破離」（11/19）の宿題＝最後のワーク。
-   フェーズ診断（はい・いいえ）→今のフェーズ→克服すること→アクション→アンケート を1枚で書いて送る。
+   SNSを運用する目的→フェーズ診断（はい・いいえ）→今のフェーズ→今の自分にできていないこと→そのためにやること を1枚で書いて送る。
    送信はGoogleフォーム（round:"w1"）→ GASが集計スプシ「守破離 宿題 回答一覧」に1人1行で書く。点数・順位はない。 */
 let CFG = {round:"2026年11月19日　公開講義「守破離」",closed:false,form:{postUrl:"",entryName:"",entryData:""},adminNames:[]};
-const BUILD = "2026-11-19 守破離 宿題 v1";
+const BUILD = "2026-11-19 守破離 宿題 v2";
 const PARAMS = new URLSearchParams(location.search);
 const normName = n => String(n||"").normalize("NFKC").toLowerCase().replace(/[\s　（）()]/g,"");
 const isAdminName = n => { const v=normName(n); return !!v && (CFG.adminNames||[]).some(a=>normName(a)===v); };
@@ -116,7 +108,7 @@ const len = s => [...(s||"")].length;
 
 /* 状態（この端末だけ・書きかけは自動保存） */
 const DKEY = "herozz-shuhari-w1";
-const blank = () => ({name:"",mgr:"",yn:[],phase:"",kokufuku:"",action:"",sat:"",satWhy:"",question:""});
+const blank = () => ({name:"",mgr:"",purpose:"",yn:[],phase:"",kokufuku:"",action:""});
 const S = { d:blank(), rec:null, busy:false, err:"", tried:false };
 function load(){ try{ const d=JSON.parse(localStorage.getItem(DKEY)||"null"); if(d) S.d={...S.d,...d}; const r=JSON.parse(localStorage.getItem(DKEY+"-rec")||"null"); if(r) S.rec=r; }catch(e){} }
 let sT; function save(){ clearTimeout(sT); sT=setTimeout(()=>{ try{ localStorage.setItem(DKEY,JSON.stringify(S.d)); }catch(e){} },200); }
@@ -124,8 +116,8 @@ let sT; function save(){ clearTimeout(sT); sT=setTimeout(()=>{ try{ localStorage
 function diagPhase(){ for(let i=0;i<DQ.length;i++){ const a=S.d.yn[i]; if(a==null) return null; if(a===false) return DQ[i].no; } return "5"; }
 function missing(){
   const m=[]; if(!S.d.name.trim()) m.push("氏名"); if(!S.d.mgr.trim()) m.push("担当マネージャー");
-  if(!S.d.phase) m.push("問2 今のフェーズ"); if(len(S.d.kokufuku.trim())<5) m.push("問3 克服すること"); if(len(S.d.action.trim())<5) m.push("問4 アクション");
-  if(!S.d.sat) m.push("アンケート 満足度"); return m;
+  if(len(S.d.purpose.trim())<5) m.push("問1 目的"); if(!S.d.phase) m.push("問3 今のフェーズ"); if(len(S.d.kokufuku.trim())<5) m.push("問4 できていないこと"); if(len(S.d.action.trim())<5) m.push("問5 やること");
+  return m;
 }
 function progress(){ const total=6, n=total-missing().length; const b=$("#progBar"); if(b) b.style.width=(n/total*100)+"%"; }
 
@@ -135,20 +127,20 @@ function render(){
   const v=$("#view"); v.replaceChildren();
   if(S.rec){ $("#progWrap").hidden=true; return renderDone(v,S.rec); }
   $("#progWrap").hidden=false;
-  v.append(cover(), diagSheet(), phaseSheet(), writeSheet(), surveySheet(), submitSheet()); progress();
+  v.append(cover(), purposeSheet(), diagSheet(), phaseSheet(), writeSheet(), submitSheet()); progress();
 }
 function cover(){
   return h("section",{class:"sheet cover"},
     h("div",{class:"kai"},CFG.round),
     h("h1",{},h("span",{class:"nw"},"今日の"),h("span",{class:"nw"},"宿題")),
-    h("div",{class:"theme"},"今の自分のフェーズと、次に上がるためにやることを、言葉にする"),
+    h("div",{class:"theme"},"SNSを運用する目的と、今の自分にできていないこと、そのためにやることを、言葉にする"),
     h("table",{class:"spec"},h("tbody",{},
       h("tr",{},h("td",{},"時間"),h("td",{},"目安7分")),
-      h("tr",{},h("td",{},"問1"),h("td",{},"フェーズ診断（はい・いいえで6問）")),
-      h("tr",{},h("td",{},"問2"),h("td",{},"今の自分のフェーズ")),
-      h("tr",{},h("td",{},"問3"),h("td",{},"次に上がるために、克服すること")),
-      h("tr",{},h("td",{},"問4"),h("td",{},"そのために、やるアクション")),
-      h("tr",{},h("td",{},"最後"),h("td",{},"今日の講義のアンケート")),
+      h("tr",{},h("td",{},"問1"),h("td",{},"あなたがSNSを運用する目的")),
+      h("tr",{},h("td",{},"問2"),h("td",{},"フェーズ診断（はい・いいえで6問）")),
+      h("tr",{},h("td",{},"問3"),h("td",{},"今の自分のフェーズ")),
+      h("tr",{},h("td",{},"問4"),h("td",{},"今の自分に、できていないこと")),
+      h("tr",{},h("td",{},"問5"),h("td",{},"そのために、やること")),
       h("tr",{},h("td",{},"点数"),h("td",{},"ありません。正直に書いてください")))),
     h("div",{class:"formbox"},
       h("div",{class:"frow"},h("label",{for:"nm"},"氏名"),
@@ -159,7 +151,7 @@ function cover(){
     h("div",{class:"note",style:"text-align:right;margin-top:14px;font-size:11px"},"版 "+BUILD));
 }
 function diagSheet(){
-  const sec=h("section",{class:"sheet"},h("h2",{class:"part"},h("span",{class:"bigq"},"問1"),h("span",{class:"pts"},"フェーズ診断")),
+  const sec=h("section",{class:"sheet"},h("h2",{class:"part"},h("span",{class:"bigq"},"問2"),h("span",{class:"pts"},"フェーズ診断")),
     h("p",{class:"task"},"上から順に、「はい」か「いいえ」で答えてください。「いいえ」が出たところで終わりです。"));
   const box=h("div",{});
   for(let i=0;i<DQ.length;i++){
@@ -186,7 +178,7 @@ function phaseSheet(){
   const sel=h("select",{id:"ph",onchange:e=>{S.d.phase=e.target.value;save();const y=scrollY;render();scrollTo(0,y);}},
     h("option",{value:""},"選んでください"),
     ORDER.map(k=>h("option",{value:k,selected:k===p},`フェーズ${k}（${PH[k].dan}）　${PH[k].def}`)));
-  return h("section",{class:"sheet"},h("h2",{class:"part"},h("span",{class:"bigq"},"問2"),h("span",{class:"pts"},"今の自分のフェーズ")),
+  return h("section",{class:"sheet"},h("h2",{class:"part"},h("span",{class:"bigq"},"問3"),h("span",{class:"pts"},"今の自分のフェーズ")),
     h("p",{class:"task"},"診断の結果を見て、今の自分のフェーズを選んでください。違うと思えば変えてOKです。"),
     sel,
     x?h("div",{class:"next"},h("div",{class:"h"},x.from?`次に上がるポイント（${p}→${ORDER[ORDER.indexOf(p)+1]}）`:"フェーズ5"),
@@ -199,26 +191,21 @@ function ta(key,max,ph){
   const paint=()=>{const n=len(t.value);c.textContent=`${n} / ${max}字`;c.classList.toggle("over",n>max)}; paint();
   return [t,c];
 }
+function purposeSheet(){
+  return h("section",{class:"sheet"},
+    h("h2",{class:"part"},h("span",{class:"bigq"},"問1"),h("span",{class:"pts"},"あなたがSNSを運用する目的は、なんですか？")),
+    h("div",{class:"field"},h("div",{class:"field-h"},h("span",{class:"guide"},"再生数ではなく、SNSで最終的に何を動かしたいか。問い合わせ・予約・売上・採用・仕事の依頼など。数字で言えるなら数字で。")),
+      ...ta("purpose",200,"例：自分のお店の予約を増やすため。SNSから月10件、予約が入る状態にしたい")));
+}
 function writeSheet(){
   return h("section",{class:"sheet"},
-    h("h2",{class:"part"},h("span",{class:"bigq"},"問3"),h("span",{class:"pts"},"次に上がるために、克服すること")),
-    h("div",{class:"field"},h("div",{class:"field-h"},h("span",{class:"guide"},"今のフェーズから上がれていない理由は何か。上の「次に上がるポイント」を、自分の場合に置きかえて書いてください。")),
-      ...ta("kokufuku",200,"例：お手本と並べると、1秒目とテロップの大きさがずれている"),
+    h("h2",{class:"part"},h("span",{class:"bigq"},"問4"),h("span",{class:"pts"},"今の自分に、できていないこと")),
+    h("div",{class:"field"},h("div",{class:"field-h"},h("span",{class:"guide"},"次のフェーズに上がれていないのは、何ができていないからか。上の「次に上がるポイント」を見て、自分の場合に置きかえて書いてください。")),
+      ...ta("kokufuku",200,"例：お手本と並べて見比べていない。1秒目とテロップの大きさが、お手本とずれている"),
       h("div",{class:"ex"},"箇条書きでもOK")),
-    h("h2",{class:"part",style:"margin-top:28px"},h("span",{class:"bigq"},"問4"),h("span",{class:"pts"},"そのために、やるアクション")),
-    h("div",{class:"field"},h("div",{class:"field-h"},h("span",{class:"guide"},"いつまでに、何を、何本やるか。")),
+    h("h2",{class:"part",style:"margin-top:28px"},h("span",{class:"bigq"},"問5"),h("span",{class:"pts"},"そのために、やること")),
+    h("div",{class:"field"},h("div",{class:"field-h"},h("span",{class:"guide"},"できていないことをなくすために、いつまでに、何を、何本やるか。")),
       ...ta("action",200,"例：今週の日曜までに、お手本を編集画面の右下に貼って、3本作り直す")));
-}
-function surveySheet(){
-  const opts=[["4","とても良かった"],["3","良かった"],["2","あまり良くなかった"],["1","良くなかった"]];
-  const [t1,c1]=ta("satWhy",300,"よかったところ・分かりにくかったところ");
-  const [t2,c2]=ta("question",300,"今日の内容で聞きたいこと（質問タイムで答えます）");
-  t1.style.minHeight=t2.style.minHeight="100px";
-  return h("section",{class:"sheet"},h("h2",{class:"part"},h("span",{class:"bigq"},"アンケート"),h("span",{class:"pts"},"今日の講義について")),
-    h("p",{class:"task"},"今日の講義は、どうでしたか？"),
-    h("div",{class:"sat",role:"radiogroup"},opts.map(([v,l])=>h("label",{},h("input",{type:"radio",name:"sat",value:v,checked:S.d.sat===v,onchange:()=>{S.d.sat=v;save();progress();}}),h("b",{},v),l))),
-    h("div",{class:"field"},h("div",{class:"field-h"},h("span",{class:"guide"},"そう思った理由",h("span",{class:"opt-l"},"（任意）"))),t1,c1),
-    h("div",{class:"field"},h("div",{class:"field-h"},h("span",{class:"guide"},"質問したいこと",h("span",{class:"opt-l"},"（任意）"))),t2,c2));
 }
 function submitSheet(){
   const m=missing();
@@ -239,8 +226,8 @@ async function submit(){
   S.tried=true; if(missing().length){ render(); const el=$(".miss"); if(el) el.scrollIntoView({block:"center"}); return; }
   S.busy=true; render();
   const d=S.d, cut=(s,n)=>[...(s||"")].slice(0,n).join("").trim();
-  const rec={id:Math.random().toString(36).slice(2,12),name:cut(d.name,40),mgr:cut(d.mgr,40),submittedAt:new Date().toISOString(),
-    diag:diagPhase()||"",yn:d.yn,phase:d.phase,kokufuku:cut(d.kokufuku,200),action:cut(d.action,200),sat:d.sat,satWhy:cut(d.satWhy,300),question:cut(d.question,300),
+  const rec={id:Math.random().toString(36).slice(2,12),name:cut(d.name,40),mgr:cut(d.mgr,40),purpose:cut(d.purpose,200),submittedAt:new Date().toISOString(),
+    diag:diagPhase()||"",yn:d.yn,phase:d.phase,kokufuku:cut(d.kokufuku,200),action:cut(d.action,200),
     test:PARAMS.get("test")==="1"||isAdminName(d.name)};
   let sent=true; try{ await sendToForm(rec); }catch(e){ sent=false; }
   rec.sent=sent; S.rec=rec;
@@ -249,7 +236,7 @@ async function submit(){
 }
 function mineText(r){
   const x=PH[r.phase]||{};
-  return `【守破離 宿題】${r.name}\n今のフェーズ：${r.phase}（${x.dan||""}）\n克服すること：${r.kokufuku}\nアクション：${r.action}`;
+  return `【守破離 宿題】${r.name}\nSNSを運用する目的：${r.purpose}\n今のフェーズ：${r.phase}（${x.dan||""}）\nできていないこと：${r.kokufuku}\nやること：${r.action}`;
 }
 function renderDone(v,r){
   const txt=mineText(r);
