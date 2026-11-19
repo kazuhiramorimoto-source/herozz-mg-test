@@ -1,0 +1,222 @@
+<!doctype html>
+<html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>HERO'ZZ ロープレ 回答シート</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=BIZ+UDPGothic:wght@400;700&family=Yomogi&family=Shippori+Mincho:wght@600;800&family=Roboto+Mono:wght@500;700&display=swap">
+<link rel="stylesheet" href="../style.css">
+<style>
+.nw{display:inline-block;white-space:nowrap}
+.cover .theme{font-family:var(--serif);font-weight:700;font-size:16px;letter-spacing:.1em;margin:8px 0 2px;line-height:1.7}
+.cover table.spec{width:100%;max-width:640px}
+.cover table.spec td:first-child{width:7em}
+.formbox{max-width:640px;margin:20px auto 0;border:1.5px solid var(--ink);text-align:left}
+.frow{display:grid;grid-template-columns:10em minmax(0,1fr)}
+.frow label{display:flex;align-items:center;justify-content:center;padding:10px 8px;font-weight:700;font-family:var(--serif);background:var(--fill);border-right:1.5px solid var(--ink);white-space:nowrap;letter-spacing:0}
+.frow input{width:100%;min-width:0;border:0;border-radius:0;font-size:17px;padding:10px 14px;background:var(--paper);font-family:var(--sans)}
+@media (max-width:480px){.frow{grid-template-columns:6em minmax(0,1fr)}.frow label{font-size:13px;padding:10px 4px}}
+.task{font-family:var(--serif);font-weight:700;font-size:18px;line-height:1.8;margin:14px 0 0}
+/* 今日のアカウント */
+.acc{margin:12px 0 0;font-size:15.5px;line-height:1.75}
+.acc dl{display:grid;grid-template-columns:7em minmax(0,1fr);gap:4px 12px;margin:0}
+.acc dt{font-weight:700}
+.acc dd{margin:0}
+.acc a{color:var(--ink)}
+.tbl{width:100%;border-collapse:collapse;margin:12px 0 0;font-size:15px}
+.tbl th,.tbl td{border:1px solid var(--ink);padding:6px 8px;text-align:left;vertical-align:top}
+.tbl th{background:var(--fill);font-family:var(--serif);white-space:nowrap}
+.tbl td.n{text-align:right;white-space:nowrap;font-family:var(--mono)}
+@media (max-width:560px){
+  .tbl thead{display:none}
+  .tbl,.tbl tbody{display:block;border-top:1px solid var(--ink)}
+  .tbl tr{display:grid;grid-template-columns:auto auto 1fr;border:1px solid var(--ink);border-top:0}
+  .tbl td{border:0;padding:6px 8px}
+  .tbl td:nth-child(1){font-weight:700;white-space:nowrap}
+  .tbl td:nth-child(3){text-align:right}
+  .tbl td:nth-child(4){grid-column:1 / -1;border-top:1px dashed var(--ink);font-size:14.5px}
+  .acc dl{grid-template-columns:6.2em minmax(0,1fr)}
+}
+.pt{margin:10px 0 0;padding-left:1.2em;font-size:15px;line-height:1.75}
+/* 型 */
+.kata{margin:12px 0 0;border:1.5px solid var(--ink);background:var(--fill);padding:12px 16px;font-size:15.5px;line-height:1.75}
+.kata b{font-family:var(--serif)}
+/* 記述 */
+.field{margin:18px 0 0}
+.field-h{display:flex;gap:12px;align-items:baseline;flex-wrap:wrap}
+.field-h .guide{font-size:14.5px;line-height:1.7;flex:1 1 18em;min-width:0;font-family:var(--sans)}
+.field textarea{display:block;width:100%;min-height:130px;margin-top:8px;font-size:16px;line-height:28px;background-origin:content-box;background-clip:content-box;background-attachment:local}
+.done-h{font-family:var(--serif);font-weight:800;font-size:24px;margin:0 0 6px;letter-spacing:.1em}
+.sentok{display:flex;gap:8px;align-items:center;font-weight:700;color:var(--ok);margin:10px 0 0}
+.mine{margin:14px 0 0;border:1.5px solid var(--ink);padding:12px 16px;white-space:pre-wrap;font-size:16px;line-height:1.8}
+.miss{color:var(--red);font-weight:700;font-size:14.5px;margin:10px 0 0}
+</style>
+</head><body>
+<div class="wrap">
+  <div class="bar-top">
+    <div class="strip">
+      <div class="meta"><span><b id="kai"></b></span><span>目安 <b>7</b>分</span></div>
+      <div class="timer" id="timer" style="font-size:15px"><small>回答</small>ロープレ</div>
+    </div>
+    <div class="progress" id="progWrap"><i id="progBar"></i></div>
+  </div>
+  <div id="banner"></div>
+  <main id="view"></main>
+</div>
+
+<script>
+/* マネージャー公開講義（11/19）のロープレ回答シート。
+   1人の生徒のアカウントを見て、目的と今月の目標→問題→課題→対策→生徒への最初の一言 を書いて送る。
+   送信はGoogleフォーム（round:"rp1"）→ GASが問題管理スプシ「ロープレ 回答一覧」に1人1行で書く。点数・順位はない。 */
+let CFG = {round:"2026年11月19日　マネージャー公開講義 ロープレ",closed:false,form:{postUrl:"",entryName:"",entryData:""},adminNames:[]};
+const BUILD = "2026-11-19 ロープレ v2";
+const PARAMS = new URLSearchParams(location.search);
+const normName = n => String(n||"").normalize("NFKC").toLowerCase().replace(/[\s　（）()]/g,"");
+const isAdminName = n => { const v=normName(n); return !!v && (CFG.adminNames||[]).some(a=>normName(a)===v); };
+
+/* 書く欄（講義の型と同じ言葉） */
+const Q = [
+  {k:"mokuteki", t:"生徒の目的と、今月の目標", g:"生徒がSNSで最終的に何を動かしたいか。今月の目標が分からないなら「分からない」と書き、何を聞くかを書く。", ph:"例：目的は〇〇。今月の目標は分からないので、最初に〇〇を聞く"},
+  {k:"mondai",   t:"問題", g:"目標に届いていないこと。数字で書く。", ph:"例：再生数が〇月の〇回から〇回に下がっている"},
+  {k:"kadai",    t:"課題", g:"どこで、なぜ止まっているかまで特定する。「再生数が伸びない」は問題で、課題ではない。", ph:"例：冒頭3秒で離脱している。理由は〇〇"},
+  {k:"taisaku",  t:"対策", g:"課題に対して、次の1本で何を変えるか。", ph:"例：次の動画は、冒頭の1文を〇〇に変える"},
+  {k:"hitokoto", t:"生徒への最初の一言", g:"面談で、最初に生徒に何と言うか。そのまま話す言葉で書く。", ph:"例：〇〇さん、今日はまず〇〇から確認させてください"}
+];
+const MAX = 300;
+
+const $ = (s, el=document) => el.querySelector(s);
+const h = (tag, attrs={}, ...kids) => {
+  const el = document.createElement(tag);
+  for (const [k,v] of Object.entries(attrs)) { if (v == null || v === false) continue; if (k === "class") el.className = v; else if (k.startsWith("on")) el.addEventListener(k.slice(2), v); else el.setAttribute(k, v === true ? "" : v); }
+  for (const c of kids.flat()) if (c != null && c !== false) el.append(c.nodeType ? c : document.createTextNode(String(c)));
+  return el;
+};
+const len = s => [...(s||"")].length;
+
+/* 状態（この端末だけ・書きかけは自動保存） */
+const DKEY = "herozz-roleplay-rp1";
+const blank = () => ({name:"",mokuteki:"",mondai:"",kadai:"",taisaku:"",hitokoto:""});
+const S = { d:blank(), rec:null, busy:false, err:"", tried:false };
+function load(){ try{ const d=JSON.parse(localStorage.getItem(DKEY)||"null"); if(d) S.d={...S.d,...d}; const r=JSON.parse(localStorage.getItem(DKEY+"-rec")||"null"); if(r) S.rec=r; }catch(e){} }
+let sT; function save(){ clearTimeout(sT); sT=setTimeout(()=>{ try{ localStorage.setItem(DKEY,JSON.stringify(S.d)); }catch(e){} },200); }
+
+function missing(){
+  const m=[]; if(!S.d.name.trim()) m.push("氏名");
+  Q.forEach((q,i)=>{ if(len(S.d[q.k].trim())<3) m.push(`問${i+1} ${q.t}`); });
+  return m;
+}
+function progress(){ const total=Q.length+1, n=total-missing().length; const b=$("#progBar"); if(b) b.style.width=(n/total*100)+"%"; }
+
+function render(){
+  $("#kai").textContent=CFG.round;
+  const b=$("#banner"); b.replaceChildren(); if(S.err) b.append(h("div",{class:"banner err"},S.err));
+  const v=$("#view"); v.replaceChildren();
+  if(S.rec){ $("#progWrap").hidden=true; return renderDone(v,S.rec); }
+  $("#progWrap").hidden=false;
+  v.append(cover(), accountSheet(), writeSheet(), submitSheet()); progress();
+}
+function cover(){
+  return h("section",{class:"sheet cover"},
+    h("div",{class:"kai"},CFG.round),
+    h("h1",{},h("span",{class:"nw"},"ロープレ"),h("span",{class:"nw"},"回答シート")),
+    h("div",{class:"theme"},"1人の生徒のアカウントを見て、問題・課題・対策を出す"),
+    h("table",{class:"spec"},h("tbody",{},
+      h("tr",{},h("td",{},"時間"),h("td",{},"目安7分")),
+      ...Q.map((q,i)=>h("tr",{},h("td",{},"問"+(i+1)),h("td",{},q.t))),
+      h("tr",{},h("td",{},"点数"),h("td",{},"ありません。他の人の答えは見ずに、自分の考えで書いてください")))),
+    h("div",{class:"formbox"},
+      h("div",{class:"frow"},h("label",{for:"nm"},"氏名"),
+        h("input",{type:"text",id:"nm",value:S.d.name,autocomplete:"name",placeholder:"マネージャー名（例：りん）",oninput:e=>{S.d.name=e.target.value;save();progress();}}))),
+    CFG.closed?h("div",{class:"banner err",style:"max-width:640px;margin:20px auto 0"},"受付は終了しました。"):null,
+    h("div",{class:"note",style:"text-align:right;margin-top:14px;font-size:11px"},"版 "+BUILD));
+}
+function accountSheet(){
+  const rows=[["7/30〜8/28","7本","約93,700回","番組出演の自己紹介・成星心愛さんとのコラボ2本・入店の告知・カヲルさんへのお祝い"],
+              ["8/29〜9/30","0本","―","投稿なし（9/9が入店後の初出勤）"],
+              ["10/1〜10/29","6本","約9,600回","質問に答える・キャラの話（彼女4人・クズ・メンヘラ・歌舞伎町の友達）"],
+              ["11/4〜11/15","6本","約2,800回","質問に答える（計算・配信・DM・余裕・フォロワーへの感謝）"]];
+  return h("section",{class:"sheet"},
+    h("h2",{class:"part"},h("span",{class:"bigq"},"今日のアカウント"),h("span",{class:"pts"},"柊 悠詩さん")),
+    h("div",{class:"acc"},h("dl",{},
+      h("dt",{},"仕事"),h("dd",{},"フリーランスエンジニア／ホスト"),
+      h("dt",{},"ジャンル"),h("dd",{},"ホスト／配信"),
+      h("dt",{},"目的（本人）"),h("dd",{},"フォロワー増加／認知拡大／ホストでの集客"),
+      h("dt",{},"悩み（本人）"),h("dd",{},"再生数が回らない、フォロワーが増えない"),
+      h("dt",{},"フォロワー"),h("dd",{},"TikTok 2,704人／Instagram 2,594人（11/19）"),
+      h("dt",{},"アカウント"),h("dd",{},
+        h("a",{href:"https://www.tiktok.com/@hiragi_yuta",target:"_blank",rel:"noopener"},"TikTok"),"　",
+        h("a",{href:"https://www.instagram.com/hiragi_yuta/",target:"_blank",rel:"noopener"},"Instagram"),"　",
+        h("a",{href:"https://x.com/hiragi_yuta",target:"_blank",rel:"noopener"},"X")))),
+    h("table",{class:"tbl"},h("thead",{},h("tr",{},h("th",{},"TikTok"),h("th",{},"本数"),h("th",{},"平均再生"),h("th",{},"主な中身"))),
+      h("tbody",{},rows.map(r=>h("tr",{},h("td",{},r[0]),h("td",{class:"n"},r[1]),h("td",{class:"n"},r[2]),h("td",{},r[3]))))),
+    h("ul",{class:"pt"},
+      h("li",{},"バズ（フォロワーの4倍以上かつ10万回以上）は3本。すべて8月（番組出演と成星心愛さんとのコラボ）"),
+      h("li",{},"11月の6本は、TikTokのコメントがすべて0件"),
+      h("li",{},"11月で一番伸びたのは11/11「ホストもちゃんと計算できないとお金残らないよ」1.09万回。ほかの5本は825〜2,252回")),
+    h("div",{class:"kata"},
+      h("b",{},"問題"),"＝目標に届いていないこと（数字）　",
+      h("b",{},"課題"),"＝どこで、なぜ止まっているか　",
+      h("b",{},"対策"),"＝次の1本で何を変えるか"));
+}
+function ta(key,ph){
+  const c=h("div",{class:"count"});
+  const t=h("textarea",{maxlength:String(MAX),placeholder:ph,oninput:e=>{S.d[key]=e.target.value;paint();save();progress();}},S.d[key]||"");
+  const paint=()=>{const n=len(t.value);c.textContent=`${n} / ${MAX}字`;c.classList.toggle("over",n>MAX)}; paint();
+  return [t,c];
+}
+function writeSheet(){
+  const sec=h("section",{class:"sheet"});
+  Q.forEach((q,i)=>{
+    sec.append(h("h2",{class:"part",style:i?"margin-top:28px":null},h("span",{class:"bigq"},"問"+(i+1)),h("span",{class:"pts"},q.t)),
+      h("div",{class:"field"},h("div",{class:"field-h"},h("span",{class:"guide"},q.g)),...ta(q.k,q.ph)));
+  });
+  return sec;
+}
+function submitSheet(){
+  const m=missing();
+  return h("section",{class:"sheet center noprint"},
+    S.tried&&m.length?h("p",{class:"miss"},"まだ書いていないところ：",m.join("・")):null,
+    h("button",{class:"btn red",disabled:S.busy||CFG.closed,onclick:submit},S.busy?"送っています…":"回答を提出する"));
+}
+
+/* 送信：Googleフォーム（ログイン不要） */
+async function sendToForm(rec){
+  if(!CFG.form.postUrl) throw new Error("送信先が未設定");
+  const fd=new FormData(); fd.append(CFG.form.entryName,rec.name);
+  fd.append(CFG.form.entryData,JSON.stringify({round:"rp1",...rec}));
+  await fetch(CFG.form.postUrl,{method:"POST",mode:"no-cors",body:fd});
+}
+async function submit(){
+  if(S.busy) return;
+  S.tried=true; if(missing().length){ render(); const el=$(".miss"); if(el) el.scrollIntoView({block:"center"}); return; }
+  S.busy=true; render();
+  const d=S.d, cut=(s,n)=>[...(s||"")].slice(0,n).join("").trim();
+  const rec={id:Math.random().toString(36).slice(2,12),name:cut(d.name,40),submittedAt:new Date().toISOString(),
+    test:PARAMS.get("test")==="1"||isAdminName(d.name)};
+  Q.forEach(q=>rec[q.k]=cut(d[q.k],MAX));
+  let sent=true; try{ await sendToForm(rec); }catch(e){ sent=false; }
+  rec.sent=sent; S.rec=rec;
+  try{ localStorage.setItem(DKEY+"-rec",JSON.stringify(rec)); localStorage.removeItem(DKEY); }catch(e){}
+  S.busy=false; S.err=sent?"":"送信に失敗しました。電波を確認して「もう一度送る」を押してください。"; render(); scrollTo(0,0);
+}
+function mineText(r){
+  return `【ロープレ 回答】${r.name}\n`+Q.map(q=>`${q.t}：${r[q.k]}`).join("\n");
+}
+function renderDone(v,r){
+  const txt=mineText(r);
+  v.append(h("section",{class:"sheet"},
+    h("p",{class:"done-h"},"提出しました"),
+    h("p",{style:"margin:0;font-weight:700"},`${r.name} さん　${new Date(r.submittedAt).toLocaleString("ja-JP")}`),
+    r.test?h("div",{class:"banner warn"},"テスト送信です（集計では「テスト」と付きます）。"):null,
+    r.sent!==false?h("p",{class:"sentok"},"✓ 回答は送信されました。"):h("div",{class:"row",style:"margin-top:8px"},h("button",{class:"btn sm",onclick:async ev=>{const b=ev.currentTarget;b.disabled=true;b.textContent="送っています…";try{await sendToForm(r);r.sent=true;S.err="";try{localStorage.setItem(DKEY+"-rec",JSON.stringify(r));}catch(x){}render();}catch(e){b.disabled=false;b.textContent="もう一度送る";}}},"もう一度送る")),
+    h("p",{class:"task"},"ロープレで当てられたら、この回答を見ながら、生徒役に話してください。"),
+    h("div",{class:"mine"},txt),
+    h("p",{class:"note noprint",style:"margin:18px 0 0"},h("a",{href:"#",style:"color:var(--muted)",onclick:e=>{e.preventDefault(); if(!confirm("この端末の記録を消して、最初の画面に戻ります。送信済みの回答は消えません。よろしいですか？")) return;
+      try{ localStorage.removeItem(DKEY+"-rec"); localStorage.removeItem(DKEY); }catch(x){} S.rec=null; S.err=""; S.tried=false; S.d=blank(); render(); scrollTo(0,0);}},"この端末で別の人が書く"))));
+}
+
+(async()=>{
+  load();
+  try{ CFG={...CFG,...(await (await fetch("config.json?v="+Date.now())).json())}; }catch(e){}
+  render();
+})();
+</script>
+</body></html>
