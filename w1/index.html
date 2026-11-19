@@ -64,7 +64,7 @@ select#ph{font-size:17px;padding:8px 12px;margin-top:10px;min-width:16em;max-wid
    SNSを運用する目的→フェーズ診断（はい・いいえ）→今のフェーズ→今の自分にできていないこと→そのためにやること を1枚で書いて送る。
    送信はGoogleフォーム（round:"w1"）→ GASが集計スプシ「守破離 宿題 回答一覧」に1人1行で書く。点数・順位はない。 */
 let CFG = {round:"2026年11月19日　公開講義「守破離」",closed:false,form:{postUrl:"",entryName:"",entryData:""},adminNames:[]};
-const BUILD = "2026-11-19 守破離 宿題 v2";
+const BUILD = "2026-11-19 守破離 宿題 v3";
 const PARAMS = new URLSearchParams(location.search);
 const normName = n => String(n||"").normalize("NFKC").toLowerCase().replace(/[\s　（）()]/g,"");
 const isAdminName = n => { const v=normName(n); return !!v && (CFG.adminNames||[]).some(a=>normName(a)===v); };
@@ -194,8 +194,8 @@ function ta(key,max,ph){
 function purposeSheet(){
   return h("section",{class:"sheet"},
     h("h2",{class:"part"},h("span",{class:"bigq"},"問1"),h("span",{class:"pts"},"あなたがSNSを運用する目的は、なんですか？")),
-    h("div",{class:"field"},h("div",{class:"field-h"},h("span",{class:"guide"},"再生数ではなく、SNSで最終的に何を動かしたいか。問い合わせ・予約・売上・採用・仕事の依頼など。数字で言えるなら数字で。")),
-      ...ta("purpose",200,"例：自分のお店の予約を増やすため。SNSから月10件、予約が入る状態にしたい")));
+    h("div",{class:"field"},h("div",{class:"field-h"},h("span",{class:"guide"},"再生数ではなく、SNSで最終的に何を動かしたいか。マネタイズ（案件・物販・自分の商品）・問い合わせ・予約・売上・採用・仕事の依頼など。数字で言えるなら数字で。")),
+      ...ta("purpose",200,"例：SNSでマネタイズするため。半年後に、案件と自分の商品で月10万円を稼げる状態にしたい")));
 }
 function writeSheet(){
   return h("section",{class:"sheet"},
